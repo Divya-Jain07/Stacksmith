@@ -108,21 +108,12 @@ export default function ChatHub() {
     const socket = getSocket()
     if (!socket) return notify('Chat service is disconnected.', 'error')
 
+    const textToSend = input.trim()
     setMsgLoading(true)
-    socket.emit('message:send', { conversationId: activeChat, text: input.trim() }, (res) => {
+    socket.emit('message:send', { conversationId: activeChat, text: textToSend }, (res) => {
       setMsgLoading(false)
-      if (res.error) {
-        if (res.error.includes('assigned')) {
-          socket.emit('conversation:assign', { conversationId: activeChat }, (assignRes) => {
-            if (assignRes.error) return notify(assignRes.error, 'error')
-            socket.emit('message:send', { conversationId: activeChat, text: input.trim() }, (retryRes) => {
-              if (retryRes.error) notify(retryRes.error, 'error')
-              else setInput('')
-            })
-          })
-        } else {
-          notify(res.error, 'error')
-        }
+      if (res?.error) {
+        notify(res.error, 'error')
       } else {
         setInput('')
       }

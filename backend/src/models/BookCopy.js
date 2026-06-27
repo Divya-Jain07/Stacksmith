@@ -9,4 +9,9 @@ const BookCopySchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
+// Compound index covering the aggregation in getBooks: group by bookId, filter by status
+BookCopySchema.index({ bookId: 1, status: 1 });
+// Index for tenant-scoped queries (adminId is used in $match of the aggregation)
+BookCopySchema.index({ adminId: 1, bookId: 1, status: 1 });
+
 module.exports = mongoose.model('BookCopy', BookCopySchema);

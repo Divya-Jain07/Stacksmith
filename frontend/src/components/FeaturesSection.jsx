@@ -8,13 +8,19 @@ import {
   Smartphone,
   Shield,
 } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 
-/* ── Data ── */
+/* ── Section accents ── */
+const ACCENT   = '#C4956A'
+const COOL     = '#8EA4B8'
+const SLATE    = '#2F3E4D'
+
+/* ── Feature data ── */
 const FEATURES = [
   {
     id: 'catalog',
     icon: BookOpen,
-    color: 'var(--accent-gold)',
+    color: ACCENT,
     label: 'Smart Catalog',
     tagline: 'Organize every title.',
     description:
@@ -24,7 +30,7 @@ const FEATURES = [
   {
     id: 'dashboard',
     icon: BarChart3,
-    color: 'var(--color-secondary)',
+    color: COOL,
     label: 'Real-time Dashboard',
     tagline: 'Pulse of your library.',
     description:
@@ -34,7 +40,7 @@ const FEATURES = [
   {
     id: 'chat',
     icon: MessageSquare,
-    color: 'var(--accent-gold)',
+    color: ACCENT,
     label: 'Member Support Chat',
     tagline: 'Help patrons in real time.',
     description:
@@ -44,7 +50,7 @@ const FEATURES = [
   {
     id: 'fines',
     icon: DollarSign,
-    color: 'var(--color-secondary)',
+    color: COOL,
     label: 'Fine Management',
     tagline: 'Close the loop on payments.',
     description:
@@ -54,7 +60,7 @@ const FEATURES = [
   {
     id: 'mobile',
     icon: Smartphone,
-    color: 'var(--accent-gold)',
+    color: ACCENT,
     label: 'Mobile Ready',
     tagline: 'Works on every device.',
     description:
@@ -64,7 +70,7 @@ const FEATURES = [
   {
     id: 'secure',
     icon: Shield,
-    color: 'var(--color-secondary)',
+    color: COOL,
     label: 'Secure & Scalable',
     tagline: 'Built for multi-branch growth.',
     description:
@@ -86,28 +92,37 @@ const cardVariants = {
 export default function FeaturesSection() {
   const ref    = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
+  const { isDarkMode } = useTheme()
 
   return (
     <section
       id="features"
       ref={ref}
       style={{
-        background: 'linear-gradient(180deg, var(--bg-hover) 0%, var(--bg-base) 100%)',
+        background: isDarkMode
+          ? 'linear-gradient(180deg, #1f2b36 0%, #2F3E4D 52%, #24313d 100%)'
+          : 'var(--bg-base)',
         padding: 'clamp(5rem, 10vh, 8rem) clamp(1rem, 5vw, 2.5rem)',
         position: 'relative',
         overflow: 'hidden',
+        transition: 'background 0.3s ease',
       }}
     >
-      {/* Background accent */}
+      {/* Subtle accent blob — low opacity so it works in both themes */}
       <div style={{
-        position: 'absolute',
-        top: '10%',
-        right: '-5%',
-        width: '500px',
-        height: '500px',
-        borderRadius: '50%',
-        background: 'rgba(184,134,11,0.05)',
-        filter: 'blur(80px)',
+        position: 'absolute', top: '5%', right: '-6%',
+        width: 460, height: 460, borderRadius: '50%',
+        background: isDarkMode ? SLATE : ACCENT,
+        opacity: isDarkMode ? 0.22 : 0.06,
+        filter: 'blur(90px)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '0%', left: '-5%',
+        width: 340, height: 340, borderRadius: '50%',
+        background: isDarkMode ? '#385166' : ACCENT,
+        opacity: isDarkMode ? 0.16 : 0.07,
+        filter: 'blur(90px)',
         pointerEvents: 'none',
       }} />
 
@@ -168,6 +183,7 @@ export default function FeaturesSection() {
 /* ── Feature Card with hover-reveal ── */
 function FeatureCard({ feature }) {
   const [hovered, setHovered] = useState(false)
+  const { isDarkMode } = useTheme()
   const Icon = feature.icon
 
   return (
@@ -183,14 +199,14 @@ function FeatureCard({ feature }) {
         overflow: 'hidden',
         cursor: 'default',
         background: hovered
-          ? `linear-gradient(145deg, rgba(${feature.color === 'var(--accent-gold)' ? '184,134,11' : '47,62,77'},0.18) 0%, rgba(20,24,30,0.96) 100%)`
-          : 'var(--bg-hover)',
+          ? isDarkMode ? 'rgba(245,237,227,0.075)' : 'rgba(47,62,77,0.06)'
+          : isDarkMode ? 'rgba(245,237,227,0.045)' : 'rgba(47,62,77,0.045)',
         border: hovered
-          ? `1px solid ${feature.color}44`
+          ? `1px solid ${feature.color}55`
           : '1px solid var(--border-color)',
         boxShadow: hovered
-          ? `0 16px 48px rgba(0,0,0,0.35), 0 0 0 1px ${feature.color}22`
-          : '0 2px 8px rgba(0,0,0,0.20)',
+          ? `0 16px 40px rgba(0,0,0,0.22), 0 0 0 1px ${feature.color}22`
+          : '0 2px 10px rgba(0,0,0,0.10)',
         transition: 'background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease',
         minHeight: '220px',
         padding: '1.75rem',
@@ -204,8 +220,7 @@ function FeatureCard({ feature }) {
         animate={{ scale: hovered ? 1.08 : 1 }}
         transition={{ type: 'spring', stiffness: 300, damping: 22 }}
         style={{
-          width: 52,
-          height: 52,
+          width: 52, height: 52,
           borderRadius: '12px',
           background: `${feature.color}22`,
           border: `1px solid ${feature.color}44`,
@@ -253,7 +268,7 @@ function FeatureCard({ feature }) {
               fontFamily: '"Inter", sans-serif',
               fontSize: '0.84rem',
               lineHeight: 1.65,
-              color: 'rgba(245,235,221,0.65)',
+              color: 'var(--text-muted)',
               marginBottom: '1rem',
               overflow: 'hidden',
             }}
@@ -303,16 +318,13 @@ const eyebrowStyle = {
   fontWeight: 500,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: 'var(--accent-gold)',
-  background: 'rgba(184,134,11,0.10)',
-  border: '1px solid rgba(184,134,11,0.25)',
+  color: ACCENT,
+  background: `${ACCENT}18`,
+  border: `1px solid ${ACCENT}44`,
   borderRadius: '999px',
   padding: '0.3rem 0.85rem',
 }
 
 const goldGradText = {
-  background: 'linear-gradient(135deg, var(--accent-gold) 0%, var(--color-tertiary-light) 100%)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  backgroundClip: 'text',
+  color: ACCENT,   /* plain color avoids the brown-box rendering bug */
 }

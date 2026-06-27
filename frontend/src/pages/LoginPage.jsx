@@ -14,6 +14,7 @@ import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-do
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, LogIn, AlertCircle, BookOpen } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { ROLE_ROUTES } from '../constants/roles'
 
 /* ── Animation variants ── */
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuth, role, loginStaff, loginMember, loading, error, clearError } = useAuth()
+  const { isDarkMode } = useTheme()
 
   const [searchParams] = useSearchParams()
 
@@ -111,7 +113,7 @@ export default function LoginPage() {
       >
         {/* ── Logo + Brand ── */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', marginBottom: '1.75rem', justifyContent: 'center' }}>
-          <img src="/stackssmith-logo.png" alt="Stacksmith Logo" style={{ height: 44, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(184,134,11,0.30))' }} />
+          <img src={isDarkMode ? '/stackssmith-logo-dark.png' : '/stackssmith-logo.png'} alt="Stacksmith Logo" style={{ height: 44, objectFit: 'contain', filter: 'drop-shadow(0 4px 12px rgba(184,134,11,0.30))' }} />
           <span style={{ fontFamily: '"Averia Sans Libre", system-ui', fontSize: '1.4rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>Stacksmith</span>
         </Link>
 

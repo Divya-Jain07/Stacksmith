@@ -221,8 +221,22 @@ module.exports = (io) => {
             return callback?.({ error: 'Access denied.' });
           }
         } else {
+          // If the conversation is already assigned to a DIFFERENT librarian, deny access
           if (conversation.librarianId && String(conversation.librarianId) !== String(socket.staffProfile._id)) {
             return callback?.({ error: 'You are not assigned to this conversation.' });
+          }
+
+          // Auto-assign to this librarian if still unassigned (so they can send messages immediately)
+          if (!conversation.librarianId && conversation.status === 'Open') {
+            const updated = await Conversation.findByIdAndUpdate(
+              conversationId,
+              { librarianId: socket.staffProfile._id, status: 'Assigned' },
+              { new: true }
+            ).populate('memberId', 'name memberCode');
+
+            // Notify the librarians dashboard and the conversation room of the assignment
+            io.to(`librarians:${adminId}`).emit('conversation:assigned', { conversation: updated });
+            io.to(`conv:${conversationId}`).emit('conversation:assigned', { conversation: updated });
           }
         }
 

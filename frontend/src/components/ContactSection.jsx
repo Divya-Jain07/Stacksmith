@@ -1,10 +1,21 @@
 import { useRef, useState } from 'react'
 import { motion, useInView } from 'framer-motion'
-import { Mail, GitFork, ExternalLink, BookOpen, ArrowRight } from 'lucide-react'
+import { Mail, BookOpen } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
+
+const C = {
+  cream:    '#F5EDE3',
+  tan:      '#D4B896',
+  brown:    '#A07040',
+  dark:     '#2C1F14',
+  charcoal: '#4A3728',
+  muted:    '#7A6050',
+}
 
 export default function ContactSection() {
   const ref    = useRef(null)
   const inView = useInView(ref, { once: true, margin: '-60px' })
+  const { isDarkMode } = useTheme()
 
   const [formState, setFormState] = useState({ name: '', email: '', message: '' })
   const [submitted, setSubmitted] = useState(false)
@@ -26,20 +37,46 @@ export default function ContactSection() {
     hidden:  { opacity: 0, y: 28 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: [0.4, 0, 0.2, 1] } },
   }
+  const theme = isDarkMode
+    ? {
+        sectionBg: 'linear-gradient(180deg, #24313d 0%, #1b2530 100%)',
+        glowOpacity: 0.12,
+        cardBg: 'rgba(245,237,227,0.045)',
+        cardBorder: 'rgba(196,149,106,0.22)',
+        cardShadow: '0 18px 60px rgba(0,0,0,0.28)',
+        heading: '#F5EDE3',
+        body: 'rgba(245,237,227,0.72)',
+        footerBorder: 'rgba(196,149,106,0.18)',
+        footerText: 'rgba(245,237,227,0.58)',
+        footerMuted: 'rgba(245,237,227,0.42)',
+      }
+    : {
+        sectionBg: `linear-gradient(180deg, #EDE0D0 0%, ${C.cream} 100%)`,
+        glowOpacity: 0.3,
+        cardBg: '#FDF8F3',
+        cardBorder: C.tan,
+        cardShadow: '0 8px 40px rgba(160,112,64,0.12)',
+        heading: C.dark,
+        body: C.charcoal,
+        footerBorder: `${C.tan}55`,
+        footerText: C.muted,
+        footerMuted: `${C.muted}99`,
+      }
 
   return (
     <section
       id="contact"
       ref={ref}
       style={{
-        background: 'linear-gradient(180deg, var(--bg-base) 0%, var(--bg-base) 100%)',
+        background: theme.sectionBg,
         padding: 'clamp(5rem, 10vh, 8rem) clamp(1rem, 5vw, 2.5rem) 0',
         position: 'relative',
         overflow: 'hidden',
+        transition: 'background 0.3s ease',
       }}
     >
-      {/* glow */}
-      <div style={{ position:'absolute', top:'5%', right:'-8%', width:'500px', height:'400px', borderRadius:'50%', background:'rgba(184,134,11,0.06)', filter:'blur(90px)', pointerEvents:'none' }} />
+      {/* soft warm glow */}
+      <div style={{ position:'absolute', top:'5%', right:'-8%', width:'500px', height:'400px', borderRadius:'50%', background: C.tan, opacity: theme.glowOpacity, pointerEvents:'none' }} />
 
       <div style={{ maxWidth: '1100px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
 
@@ -56,7 +93,7 @@ export default function ContactSection() {
             fontSize: 'clamp(1.9rem, 4vw, 3rem)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
-            color: 'var(--text-main)',
+            color: theme.heading,
             margin: '1rem 0 1rem',
           }}>
             Ready to build your{' '}
@@ -65,7 +102,7 @@ export default function ContactSection() {
           <p style={{
             fontFamily: '"Inter", sans-serif',
             fontSize: '1.05rem',
-            color: 'var(--text-muted)',
+            color: theme.body,
             maxWidth: '460px',
             margin: '0 auto',
             lineHeight: 1.7,
@@ -80,11 +117,11 @@ export default function ContactSection() {
           initial="hidden"
           animate={inView ? 'visible' : 'hidden'}
           style={{
-            background: 'var(--bg-hover)',
-            border: '1px solid var(--border-color)',
-            borderRadius: '16px',
+            background: theme.cardBg,
+            border: `1px solid ${theme.cardBorder}`,
+            borderRadius: '20px',
             padding: 'clamp(2rem, 4vw, 3rem)',
-            backdropFilter: 'blur(10px)',
+            boxShadow: theme.cardShadow,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -92,10 +129,11 @@ export default function ContactSection() {
             textAlign: 'center',
             maxWidth: '600px',
             margin: '0 auto',
+            backdropFilter: isDarkMode ? 'blur(14px)' : 'none',
           }}
         >
           <img
-            src="/stackssmith-logo.png"
+            src={isDarkMode ? '/stackssmith-logo-dark.png' : '/stackssmith-logo.png'}
             alt="Stacksmith"
             style={{ height: 60, marginBottom: '0.5rem', filter: 'drop-shadow(0 4px 12px rgba(184,134,11,0.25))' }}
           />
@@ -103,7 +141,7 @@ export default function ContactSection() {
             fontFamily: '"Inter", sans-serif',
             fontSize: '1.05rem',
             lineHeight: 1.75,
-            color: 'var(--text-main)',
+            color: theme.body,
             maxWidth: '480px',
           }}>
             For further details and registration, please email us directly. We'd love to hear from you!
@@ -116,14 +154,14 @@ export default function ContactSection() {
               gap: '0.75rem',
               padding: '0.8rem 1.6rem',
               borderRadius: '9px',
-              background: 'linear-gradient(135deg, var(--accent-gold) 0%, var(--color-tertiary-light) 100%)',
+              background: `linear-gradient(135deg, ${C.brown} 0%, #C4956A 100%)`,
               border: 'none',
               color: '#fff',
               fontFamily: '"Inter", sans-serif',
               fontSize: '1rem',
               fontWeight: 700,
               textDecoration: 'none',
-              boxShadow: '0 4px 20px rgba(184,134,11,0.35)',
+              boxShadow: `0 4px 20px rgba(160,112,64,0.35)`,
             }}
           >
             <Mail size={18} strokeWidth={2} />
@@ -135,7 +173,7 @@ export default function ContactSection() {
       {/* ── Footer strip ── */}
       <div style={{
         marginTop: 'clamp(4rem, 8vh, 6rem)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: `1px solid ${theme.footerBorder}`,
         padding: '2rem clamp(1rem, 5vw, 2.5rem)',
       }}>
         <div style={{
@@ -148,12 +186,12 @@ export default function ContactSection() {
           gap: '1rem',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <BookOpen size={16} color="var(--accent-gold)" strokeWidth={1.8} />
+            <BookOpen size={16} color={C.brown} strokeWidth={1.8} />
             <span style={{
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.72rem',
               fontWeight: 500,
-              color: 'var(--border-color)',
+              color: theme.footerText,
               letterSpacing: '0.06em',
             }}>
               Stacksmith © {new Date().getFullYear()}
@@ -162,7 +200,7 @@ export default function ContactSection() {
           <span style={{
             fontFamily: '"JetBrains Mono", monospace',
             fontSize: '0.65rem',
-            color: 'rgba(245,235,221,0.22)',
+            color: theme.footerMuted,
             letterSpacing: '0.06em',
           }}>
             Built with MERN · Manage. Organize. Empower Libraries.
@@ -202,15 +240,15 @@ const eyebrow = {
   fontWeight: 500,
   letterSpacing: '0.14em',
   textTransform: 'uppercase',
-  color: 'var(--accent-gold)',
-  background: 'rgba(184,134,11,0.10)',
-  border: '1px solid rgba(184,134,11,0.25)',
+  color: '#A07040',
+  background: 'rgba(160,112,64,0.10)',
+  border: '1px solid rgba(160,112,64,0.28)',
   borderRadius: '999px',
   padding: '0.3rem 0.85rem',
 }
 
 const goldGrad = {
-  background: 'linear-gradient(135deg, var(--accent-gold) 0%, var(--color-tertiary-light) 100%)',
+  background: 'linear-gradient(135deg, #A07040 0%, #C4956A 100%)',
   WebkitBackgroundClip: 'text',
   WebkitTextFillColor: 'transparent',
   backgroundClip: 'text',

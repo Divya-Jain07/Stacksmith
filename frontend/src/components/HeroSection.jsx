@@ -1,315 +1,211 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 
-const container = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.18, delayChildren: 0.3 } },
+const LIGHT = {
+  text:        '#2C1F14',
+  sub:         '#5C3D20',
+  muted:       '#7A6050',
+  accent:      '#A07040',
+  accentLight: '#C4956A',
+  pill:        'rgba(160,112,64,0.13)',
+  pillBorder:  'rgba(160,112,64,0.35)',
 }
+const DARK = {
+  text:        '#F0E6D6',
+  sub:         '#C8B49A',
+  muted:       '#9A8070',
+  accent:      '#C4956A',
+  accentLight: '#DDB080',
+  pill:        'rgba(196,149,106,0.14)',
+  pillBorder:  'rgba(196,149,106,0.36)',
+}
+
 const fadeUp = {
-  hidden:  { opacity: 0, y: 32 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: [0.4, 0, 0.2, 1] } },
+  hidden:  { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.4, 0, 0.2, 1] } },
 }
-const scaleIn = {
-  hidden:  { opacity: 0, scale: 0.82 },
-  visible: { opacity: 1, scale: 1,  transition: { duration: 0.7,  ease: [0.34, 1.56, 0.64, 1] } },
+const stagger = {
+  hidden:  {},
+  visible: { transition: { staggerChildren: 0.11, delayChildren: 0.1 } },
 }
 
 export default function HeroSection() {
+  const { isDarkMode } = useTheme()
+  const P = isDarkMode ? DARK : LIGHT
+
   return (
     <section
       id="hero"
       style={{
         minHeight: '100svh',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
+        justifyContent: 'flex-start',
         alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
         overflow: 'hidden',
-        background:
-          'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(47,62,77,0.55) 0%, transparent 70%),' +
-          'radial-gradient(ellipse 60% 40% at 80% 110%, rgba(184,134,11,0.12) 0%, transparent 60%),' +
-          'linear-gradient(160deg, var(--bg-base) 0%, var(--bg-hover) 40%, var(--bg-base) 100%)',
-        padding: 'clamp(7rem, 12vh, 10rem) clamp(1rem, 5vw, 2.5rem) clamp(4rem, 8vh, 6rem)',
+        backgroundColor: isDarkMode ? '#1f2b36' : '#F5EDE3',
+        backgroundImage: isDarkMode
+          ? `linear-gradient(180deg, rgba(31,43,54,0.36) 0%, rgba(31,43,54,0.48) 42%, rgba(31,43,54,0.88) 82%, #1f2b36 100%), url('/library_hero_dark.png')`
+          : `linear-gradient(180deg, rgba(245,237,227,0.10) 0%, rgba(245,237,227,0.18) 58%, rgba(245,237,227,0.72) 100%), url('/library_hero.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center bottom',
+        backgroundRepeat: 'no-repeat',
+        /* top: just below navbar; bottom: keeps full bottom half free for illustration */
+        paddingTop:    'clamp(5rem, 9vh, 6.5rem)',
+        paddingBottom: '52vh',
+        paddingLeft:   'clamp(1.5rem, 6vw, 3rem)',
+        paddingRight:  'clamp(1.5rem, 6vw, 3rem)',
         textAlign: 'center',
       }}
     >
-      {/* ── Ambient glow orbs ── */}
-      <div style={orb('var(--accent-gold)', '45%', '-12%', '520px', 0.07)} />
-      <div style={orb('var(--color-secondary)', '-8%', '55%', '400px', 0.18)} />
-      <div style={orb('var(--accent-gold)', '80%', '75%', '350px', 0.09)} />
-
-      {/* ── Subtle grid overlay ── */}
-      <div style={gridOverlay} />
-
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '32vh',
+          background: isDarkMode
+            ? 'linear-gradient(180deg, rgba(31,43,54,0) 0%, #1f2b36 92%)'
+            : 'linear-gradient(180deg, rgba(245,237,227,0) 0%, #F5EDE3 92%)',
+          pointerEvents: 'none',
+          zIndex: 1,
+        }}
+      />
       <motion.div
-        variants={container}
+        variants={stagger}
         initial="hidden"
         animate="visible"
-        style={{ position: 'relative', zIndex: 2, maxWidth: '820px', width: '100%' }}
+        style={{ position: 'relative', zIndex: 2, maxWidth: '600px', width: '100%' }}
       >
-        {/* ── Logo ── */}
-        <motion.div variants={scaleIn} style={{ marginBottom: '2.5rem' }}>
-          <img
-            src="/stackssmith-logo.png"
-            alt="Stacksmith"
-            style={{
-              height: 'clamp(90px, 14vw, 140px)',
-              width: 'auto',
-              objectFit: 'contain',
-              filter: 'drop-shadow(0 8px 32px rgba(184,134,11,0.30))',
-              margin: '0 auto',
-            }}
-          />
-        </motion.div>
-
-        {/* ── Eyebrow label ── */}
-        <motion.div variants={fadeUp}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '0.72rem',
-              fontWeight: 500,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'var(--accent-gold)',
-              background: 'rgba(184,134,11,0.10)',
-              border: '1px solid rgba(184,134,11,0.28)',
-              borderRadius: '999px',
-              padding: '0.35rem 1rem',
-              marginBottom: '1.5rem',
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent-gold)', display: 'inline-block', animation: 'pulse 2s infinite' }} />
+        {/* ── Eyebrow ── */}
+        <motion.div variants={fadeUp} style={{ marginBottom: '1rem' }}>
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '0.65rem',
+            fontWeight: 500,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: P.accent,
+            background: P.pill,
+            border: `1px solid ${P.pillBorder}`,
+            borderRadius: '999px',
+            padding: '0.28rem 0.85rem',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+          }}>
+            <span style={{ width: 5, height: 5, borderRadius: '50%', background: P.accent, display: 'inline-block', animation: 'hero-pulse 2s infinite' }} />
             Library Management System
           </span>
         </motion.div>
 
         {/* ── Headline ── */}
-        <motion.h1
-          variants={fadeUp}
-          style={{
-            fontFamily: '"Manrope", sans-serif',
-            fontSize: 'clamp(2.4rem, 6vw, 4.2rem)',
-            fontWeight: 800,
-            lineHeight: 1.1,
-            letterSpacing: '-0.03em',
-            color: 'var(--text-main)',
-            marginBottom: '1.5rem',
-          }}
-        >
+        <motion.h1 variants={fadeUp} style={{
+          fontFamily: '"Manrope", sans-serif',
+          fontSize: 'clamp(2.2rem, 5.5vw, 3.6rem)',
+          fontWeight: 800,
+          lineHeight: 1.1,
+          letterSpacing: '-0.03em',
+          color: P.text,
+          marginBottom: '0.9rem',
+        }}>
           Manage.{' '}
-          <span
-            style={{
-              background: 'linear-gradient(135deg, var(--accent-gold) 0%, var(--color-tertiary-light) 60%, var(--color-tertiary-light) 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Organize.
-          </span>{' '}
-          Empower Libraries.
+          <span style={{ color: P.accent }}>Organize.</span>
+          {' '}Empower.
         </motion.h1>
 
-        {/* ── Sub-headline ── */}
-        <motion.p
-          variants={fadeUp}
-          style={{
-            fontFamily: '"Inter", sans-serif',
-            fontSize: 'clamp(1rem, 2.2vw, 1.2rem)',
-            fontWeight: 400,
-            lineHeight: 1.7,
-            color: 'var(--text-muted)',
-            maxWidth: '580px',
-            margin: '0 auto 2.75rem',
-          }}
-        >
-          A full-stack, role-based library platform for staff, admins, and members.
-          Issue books, track fines, and chat with patrons — all in one place.
+        {/* ── Subheading ── */}
+        <motion.p variants={fadeUp} style={{
+          fontFamily: '"Inter", sans-serif',
+          fontSize: 'clamp(0.9rem, 1.6vw, 1rem)',
+          lineHeight: 1.65,
+          color: P.sub,
+          maxWidth: '420px',
+          margin: '0 auto 2rem',
+        }}>
+          Role-based platform for staff, admins &amp; members —
+          issue books, track fines, and chat in real time.
         </motion.p>
 
-        {/* ── CTA Buttons ── */}
-        <motion.div
-          variants={fadeUp}
-          style={{
-            display: 'flex',
-            gap: '1rem',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <CTAButton
-            primary
-            to="/login"
-            icon="🖥️"
-            label="Staff Portal Console"
-            sub="Admin · Librarian"
-          />
-          <CTAButton
-            to="/login?tab=member"
-            icon="📚"
-            label="Member Access Kiosk"
-            sub="Students · Faculty"
-          />
-        </motion.div>
-
-        {/* ── Stats row ── */}
-        <motion.div
-          variants={fadeUp}
-          style={{
-            display: 'flex',
-            gap: 'clamp(1.5rem, 4vw, 3rem)',
-            justifyContent: 'center',
-            flexWrap: 'wrap',
-            marginTop: '3.5rem',
-            paddingTop: '2.5rem',
-            borderTop: '1px solid var(--bg-hover)',
-          }}
-        >
-          {[
-            ['4',    'User Roles',       'SuperAdmin to Member'],
-            ['∞',    'Books Cataloged',  'Unlimited inventory'],
-            ['Live', 'Chat Support',     'Real-time help desk'],
-          ].map(([val, title, sub]) => (
-            <div key={title} style={{ textAlign: 'center' }}>
-              <div style={{
-                fontFamily: '"Manrope", sans-serif',
-                fontSize: 'clamp(1.6rem, 3vw, 2.4rem)',
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, var(--accent-gold), var(--color-tertiary-light))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}>{val}</div>
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-main)', marginTop: '2px' }}>{title}</div>
-              <div style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</div>
-            </div>
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* ── Scroll hint ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.6, duration: 0.8 }}
-        style={{
-          position: 'absolute',
-          bottom: '2rem',
-          left: '50%',
-          transform: 'translateX(-50%)',
+        {/* ── CTAs — solid contrast so they pop on any bg ── */}
+        <motion.div variants={fadeUp} style={{
           display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '6px',
-          zIndex: 2,
-        }}
-      >
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.62rem', letterSpacing: '0.1em', color: 'var(--border-color)', textTransform: 'uppercase' }}>
-          scroll
-        </span>
+          gap: '1.25rem',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}>
+          {/* Primary: solid dark brown — always visible */}
+          <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
+            <Link to="/login" style={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '1px',
+              padding: '0.75rem 1.4rem',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              minWidth: '160px',
+              background: isDarkMode ? '#C4956A' : '#6B4226',
+              boxShadow: isDarkMode
+                ? '0 4px 20px rgba(196,149,106,0.40)'
+                : '0 4px 20px rgba(60,30,10,0.35)',
+            }}>
+              <span style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.88rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🖥️ Staff Portal
+              </span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.58rem', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.70)' }}>
+                Admin · Librarian
+              </span>
+            </Link>
+          </motion.div>
+
+          {/* Secondary: white/opaque — always visible */}
+          <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
+            <Link to="/login?tab=member" style={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '1px',
+              padding: '0.75rem 1.4rem',
+              borderRadius: '12px',
+              textDecoration: 'none',
+              minWidth: '160px',
+              background: isDarkMode ? 'rgba(30,20,10,0.80)' : 'rgba(255,255,255,0.92)',
+              border: `1.5px solid ${P.pillBorder}`,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.14)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+            }}>
+              <span style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.88rem', fontWeight: 700, color: P.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                📚 Member Kiosk
+              </span>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.58rem', letterSpacing: '0.05em', color: P.muted }}>
+                Students · Faculty
+              </span>
+            </Link>
+          </motion.div>
+        </motion.div>
+        {/* ── Scroll hint — in normal flow, below buttons ── */}
         <motion.div
-          animate={{ y: [0, 8, 0] }}
-          transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-          style={{ width: 1, height: 36, background: 'linear-gradient(to bottom, rgba(184,134,11,0.6), transparent)', borderRadius: '1px' }}
-        />
+          variants={fadeUp}
+          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '2rem', opacity: 0.7 }}
+        >
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.52rem', letterSpacing: '0.1em', color: P.muted, textTransform: 'uppercase' }}>scroll</span>
+          <motion.div
+            animate={{ y: [0, 7, 0] }}
+            transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
+            style={{ width: 1, height: 24, background: `linear-gradient(to bottom, ${P.accent}80, transparent)`, borderRadius: '1px' }}
+          />
+        </motion.div>
       </motion.div>
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-      `}</style>
+      <style>{`@keyframes hero-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
     </section>
   )
-}
-
-/* ── CTA Button ── */
-function CTAButton({ primary, to, icon, label, sub }) {
-  return (
-    <motion.div
-      whileHover={{ scale: 1.04, y: -2 }}
-      whileTap={{ scale: 0.97 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-      style={{ display: 'inline-block' }}
-    >
-      <Link
-        to={to}
-        style={{
-          display: 'inline-flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: '2px',
-          padding: '0.85rem 1.6rem',
-          borderRadius: '10px',
-          textDecoration: 'none',
-          cursor: 'pointer',
-          minWidth: '200px',
-          background: primary
-            ? 'linear-gradient(135deg, var(--accent-gold) 0%, var(--color-tertiary-light) 100%)'
-            : 'var(--bg-hover)',
-          border: primary
-            ? 'none'
-            : '1px solid var(--border-color)',
-          boxShadow: primary
-            ? '0 4px 24px rgba(184,134,11,0.40), inset 0 1px 0 rgba(255,255,255,0.15)'
-            : '0 2px 12px rgba(0,0,0,0.25)',
-          backdropFilter: primary ? 'none' : 'blur(8px)',
-          transition: 'box-shadow 0.25s ease',
-        }}
-      >
-        <span style={{
-          fontFamily: '"Inter", sans-serif',
-          fontSize: '0.95rem',
-          fontWeight: 700,
-          color: primary ? '#fff' : 'var(--text-main)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}>
-          {icon} {label}
-        </span>
-        <span style={{
-          fontFamily: '"JetBrains Mono", monospace',
-          fontSize: '0.65rem',
-          fontWeight: 400,
-          letterSpacing: '0.06em',
-          color: primary ? 'rgba(255,255,255,0.70)' : 'var(--text-muted)',
-        }}>
-          {sub}
-        </span>
-      </Link>
-    </motion.div>
-  )
-}
-
-/* ── Helpers ── */
-function orb(color, top, left, size, opacity) {
-  return {
-    position: 'absolute',
-    top,
-    left,
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    background: color,
-    opacity,
-    filter: 'blur(90px)',
-    pointerEvents: 'none',
-  }
-}
-
-const gridOverlay = {
-  position: 'absolute',
-  inset: 0,
-  backgroundImage:
-    'linear-gradient(var(--bg-hover) 1px, transparent 1px),' +
-    'linear-gradient(90deg, var(--bg-hover) 1px, transparent 1px)',
-  backgroundSize: '60px 60px',
-  pointerEvents: 'none',
 }

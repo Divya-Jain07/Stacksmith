@@ -10,10 +10,12 @@ import { useAuth } from '../../context/AuthContext'
 import { useDialog } from '../../context/DialogContext'
 import { adminApi, authApi } from '../../services/api'
 import ThemeToggle from '../../components/ThemeToggle'
+import { useTheme } from '../../context/ThemeContext'
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth()
   const { notify } = useDialog()
+  const { isDarkMode } = useTheme()
   
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -145,7 +147,7 @@ export default function SuperAdminDashboard() {
         }}
       >
         <div>
-          <img src="/stackssmith-logo.png" alt="Stacksmith" style={{ height: 36, marginBottom: '0.75rem' }} />
+          <img src={isDarkMode ? '/stackssmith-logo-dark.png' : '/stackssmith-logo.png'} alt="Stacksmith" style={{ height: 36, marginBottom: '0.75rem' }} />
           <span style={{
             display: 'block',
             fontFamily: '"JetBrains Mono", monospace',

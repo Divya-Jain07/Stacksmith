@@ -3,11 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LogOut, User, X, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTheme } from '../../context/ThemeContext'
 import ThemeToggle from '../ThemeToggle'
 import { authApi } from '../../services/api'
 
 export default function DashboardLayout({ navItems, children }) {
   const { user, role, logout } = useAuth()
+  const { isDarkMode } = useTheme()
   const location = useLocation()
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
@@ -66,7 +68,7 @@ export default function DashboardLayout({ navItems, children }) {
       >
         {/* Logo */}
         <div style={{ padding: '0 1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <img src="/stackssmith-logo.png" alt="Stacksmith Logo" style={{ height: 42, objectFit: 'contain' }} />
+          <img src={isDarkMode ? '/stackssmith-logo-dark.png' : '/stackssmith-logo.png'} alt="Stacksmith Logo" style={{ height: 42, objectFit: 'contain' }} />
           <span style={{ fontFamily: '"Averia Sans Libre", system-ui', fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>Stacksmith</span>
         </div>
 

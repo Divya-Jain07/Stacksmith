@@ -166,21 +166,39 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
 
 // Get Books Catalog
 exports.getBooks = catchAsync(async (req, res, next) => {
-  const books = await Book.find(req.tenantFilter || {}).sort({ createdAt: -1 });
+  const filter = req.tenantFilter || {};
 
-  // Compute live availableCopies from actual copy statuses (more accurate than cached counts)
-  const booksWithLiveCounts = await Promise.all(books.map(async (book) => {
-    const [totalCopies, availableCopies] = await Promise.all([
-      BookCopy.countDocuments({ bookId: book._id }),
-      BookCopy.countDocuments({ bookId: book._id, status: 'available' })
-    ]);
-    const obj = book.toObject();
-    obj.totalCopies = totalCopies;
-    obj.availableCopies = availableCopies;
-    return obj;
-  }));
+  // Fetch all books + aggregate copy counts in parallel — only 2 DB round-trips total
+  // instead of the old N+1 pattern (1 + 2*N queries for N books).
+  const [books, copyAgg] = await Promise.all([
+    Book.find(filter).sort({ createdAt: -1 }).lean(),
+    BookCopy.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: '$bookId',
+          totalCopies: { $sum: 1 },
+          availableCopies: {
+            $sum: { $cond: [{ $eq: ['$status', 'available'] }, 1, 0] }
+          }
+        }
+      }
+    ])
+  ]);
 
-  res.json(booksWithLiveCounts);
+  // Build a fast lookup map: bookId (string) → { totalCopies, availableCopies }
+  const countMap = {};
+  for (const row of copyAgg) {
+    countMap[String(row._id)] = { totalCopies: row.totalCopies, availableCopies: row.availableCopies };
+  }
+
+  // Merge counts into book objects (fall back to 0 for books with no copies yet)
+  const booksWithCounts = books.map((book) => {
+    const counts = countMap[String(book._id)] || { totalCopies: 0, availableCopies: 0 };
+    return { ...book, ...counts };
+  });
+
+  res.json(booksWithCounts);
 });
 
 // Get Single Book Metadata
