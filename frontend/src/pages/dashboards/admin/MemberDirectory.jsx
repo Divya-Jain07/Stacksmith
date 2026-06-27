@@ -102,6 +102,14 @@ export default function MemberDirectory() {
     m.memberCode.toLowerCase().includes(search.toLowerCase())
   )
 
+  const activeOrRequestCount = (profile) => {
+    if (!profile) return { label: 'Active Borrows', value: 0 };
+    const reqs = profile.borrowHistory?.filter(h => h.requestStatus === 'Requested').length || 0;
+    const active = profile.borrowHistory?.filter(h => h.requestStatus === 'Active').length || 0;
+    if (reqs > 0) return { label: reqs === 1 ? 'Pending Request' : 'Pending Requests', value: reqs };
+    return { label: active === 1 ? 'Active Borrow' : 'Active Borrows', value: active };
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
@@ -246,7 +254,7 @@ export default function MemberDirectory() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-                <StatBox label="Active Borrows" value={profileData.borrowHistory?.filter(h => h.requestStatus === 'Active').length || 0} />
+                <StatBox label={activeOrRequestCount(profileData).label} value={activeOrRequestCount(profileData).value} />
                 <StatBox label="Total Read" value={profileData.stats?.totalBooksRead || 0} />
                 <StatBox label="Outstanding Fines" value={`$${profileData.outstandingFines?.reduce((s, f) => s + (f.amountToPay || 0), 0).toFixed(2) || '0.00'}`} valueColor="#EF5350" />
                 <StatBox label="Favorite Genre" value={profileData.stats?.mostReadGenre || 'N/A'} small />

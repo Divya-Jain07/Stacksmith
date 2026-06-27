@@ -80,8 +80,7 @@ export default function LoginPage() {
     <div style={{
       minHeight: '100svh',
       background:
-        'radial-gradient(ellipse 70% 50% at 50% -5%, rgba(47,62,77,0.50) 0%, transparent 65%),' +
-        'linear-gradient(160deg, #0D1117 0%, #161C24 50%, #1A2030 100%)',
+        'var(--bg-base)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -123,7 +122,7 @@ export default function LoginPage() {
             fontSize: '1.6rem',
             fontWeight: 800,
             letterSpacing: '-0.025em',
-            color: '#F5EBDD',
+            color: 'var(--text-main)',
             marginBottom: '0.4rem',
           }}>
             Welcome back
@@ -333,13 +332,13 @@ export default function LoginPage() {
         <div style={{
           marginTop: '1.5rem',
           paddingTop: '1.25rem',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--border-color)',
           textAlign: 'center',
         }}>
           <span style={{
             fontFamily: '"JetBrains Mono", monospace',
             fontSize: '0.65rem',
-            color: 'rgba(245,235,221,0.25)',
+            color: 'var(--text-muted)',
             letterSpacing: '0.06em',
           }}>
             {tab === 'staff'
@@ -355,12 +354,12 @@ export default function LoginPage() {
             style={{
               fontFamily: '"Inter", sans-serif',
               fontSize: '0.78rem',
-              color: 'rgba(245,235,221,0.35)',
+              color: 'var(--text-muted)',
               textDecoration: 'none',
               transition: 'color 0.2s ease',
             }}
-            onMouseEnter={e => (e.target.style.color = '#B8860B')}
-            onMouseLeave={e => (e.target.style.color = 'rgba(245,235,221,0.35)')}
+            onMouseEnter={e => (e.target.style.color = 'var(--accent-gold)')}
+            onMouseLeave={e => (e.target.style.color = 'var(--text-muted)')}
           >
             ← Back to Stacksmith home
           </Link>
@@ -385,8 +384,8 @@ function Field({ id, name, type, label, placeholder, value, onChange, autoComple
         autoComplete={autoComplete}
         required={required}
         style={inputStyle}
-        onFocus={e => (e.target.style.borderColor = '#B8860B')}
-        onBlur={e  => (e.target.style.borderColor = 'rgba(255,255,255,0.10)')}
+        onFocus={e => (e.target.style.borderColor = 'var(--accent-gold)')}
+        onBlur={e  => (e.target.style.borderColor = 'var(--border-color)')}
       />
     </div>
   )
@@ -398,8 +397,8 @@ function Spinner() {
     <span style={{
       width: 15,
       height: 15,
-      border: '2px solid rgba(255,255,255,0.3)',
-      borderTopColor: '#fff',
+      border: '2px solid rgba(184,134,11,0.2)',
+      borderTopColor: 'var(--accent-gold)',
       borderRadius: '50%',
       display: 'inline-block',
       animation: 'spin 0.7s linear infinite',
@@ -417,7 +416,7 @@ const labelStyle = {
   fontWeight: 600,
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
-  color: 'rgba(245,235,221,0.50)',
+  color: 'var(--text-muted)',
   marginBottom: '0.4rem',
 }
 
@@ -425,9 +424,9 @@ const inputStyle = {
   width: '100%',
   padding: '0.7rem 0.9rem',
   borderRadius: '9px',
-  border: '1.5px solid rgba(255,255,255,0.10)',
-  background: 'rgba(255,255,255,0.05)',
-  color: '#F5EBDD',
+  border: '1.5px solid var(--border-color)',
+  background: 'var(--bg-hover)',
+  color: 'var(--text-main)',
   fontFamily: '"Inter", sans-serif',
   fontSize: '0.92rem',
   outline: 'none',
