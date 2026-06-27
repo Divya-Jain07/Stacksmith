@@ -87,7 +87,7 @@ export default function MemberChatHub() {
     const socket = getSocket()
     if (!socket) return alert('Chat service is disconnected.')
     
-    socket.emit('conversation:new', { text: 'Hello, I need help with my account.' }, (res) => {
+    socket.emit('conversation:new', { text: null }, (res) => {
       if (res.error) return alert(res.error)
       fetchConversations() // Refresh list
       handleSelectConv(res.conversation)

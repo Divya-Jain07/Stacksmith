@@ -258,7 +258,7 @@ export default function CounterConsole() {
               {(tab === 'issue' || tab === 'renew') && (
                 <div>
                   <label style={{ display: 'block', color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0 0 0.5rem 0.2rem' }}>Due Date</label>
-                  <input type="date" name="dueDate" value={formData.dueDate} onChange={handleChange} style={inputStyle} />
+                  <input type="date" name="dueDate" min={new Date().toISOString().split('T')[0]} value={formData.dueDate} onChange={handleChange} style={inputStyle} />
                 </div>
               )}
 

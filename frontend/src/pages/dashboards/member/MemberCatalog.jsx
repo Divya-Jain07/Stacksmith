@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Search, Book, Clock } from 'lucide-react'
+import { Search, Book, Clock, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { bookApi, borrowApi } from '../../../services/api'
 
 export default function MemberCatalog() {
@@ -8,7 +9,7 @@ export default function MemberCatalog() {
   const [search, setSearch] = useState('')
   const [searchField, setSearchField] = useState('book')
   const [requestLoading, setRequestLoading] = useState(null)
-
+  const [requestModal, setRequestModal] = useState({ open: false, book: null })
   const fetchBooks = async () => {
     try {
       setLoading(true)
@@ -30,8 +31,12 @@ export default function MemberCatalog() {
       alert('This book is currently out of stock.')
       return
     }
+    setRequestModal({ open: true, book })
+  }
 
-    if (!window.confirm(`Request a copy of "${book.name}"?`)) return;
+  const confirmRequest = async () => {
+    const book = requestModal.book;
+    if (!book) return;
 
     try {
       setRequestLoading(book._id)
@@ -42,6 +47,7 @@ export default function MemberCatalog() {
       alert(err.message || 'Failed to request book')
     } finally {
       setRequestLoading(null)
+      setRequestModal({ open: false, book: null })
     }
   }
 
@@ -59,6 +65,7 @@ export default function MemberCatalog() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: 0, fontFamily: '"Averia Sans Libre", system-ui' }}>Library Catalog</h2>
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Showing {filteredBooks.length} of {books.length} books</span>
       </div>
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -141,6 +148,30 @@ export default function MemberCatalog() {
           </table>
         </div>
       </div>
+
+      <AnimatePresence>
+        {requestModal.open && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '400px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>Confirm Request</h3>
+                <button onClick={() => setRequestModal({ open: false, book: null })} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20}/></button>
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                Are you sure you want to request a copy of <strong style={{ color: 'var(--text-main)' }}>{requestModal.book?.name}</strong>? 
+                <br/><br/>
+                Please pick it up at the counter once requested.
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button onClick={() => setRequestModal({ open: false, book: null })} style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--bg-hover)', color: 'var(--text-main)', cursor: 'pointer' }}>Cancel</button>
+                <button onClick={confirmRequest} disabled={requestLoading} style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--accent-gold)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
+                  {requestLoading ? 'Requesting...' : 'Confirm Request'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

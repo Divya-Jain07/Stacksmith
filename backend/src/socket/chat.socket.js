@@ -84,8 +84,7 @@ module.exports = (io) => {
           return callback?.({ error: 'Only members can start conversations.' });
         }
 
-        const sanitized = sanitizeText(text);
-        if (!sanitized) return callback?.({ error: 'Message text cannot be empty.' });
+        const sanitized = text ? sanitizeText(text) : '';
 
         const conversation = new Conversation({
           memberId: socket.memberProfile._id,
@@ -95,15 +94,16 @@ module.exports = (io) => {
         await conversation.save();
         await conversation.populate('memberId', 'name memberCode');
 
-        const message = new Message({
-          conversationId: conversation._id,
-          senderId: userId,
-          senderRole: 'Member',
-          text: sanitized
-        });
-        await message.save();
-
-        await Conversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date() });
+        if (sanitized) {
+          const message = new Message({
+            conversationId: conversation._id,
+            senderId: userId,
+            senderRole: 'Member',
+            text: sanitized
+          });
+          await message.save();
+          await Conversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date() });
+        }
 
         // Member joins the conversation room
         socket.join(`conv:${conversation._id}`);

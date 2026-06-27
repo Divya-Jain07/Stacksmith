@@ -312,7 +312,6 @@ export default function MemberDirectory() {
                     <select value={editForm.status} onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))} style={inputStyle}>
                       <option value="active">Active</option>
                       <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
                     </select>
                   </FieldGroup>
                   <FieldGroup label="Membership Expiry">

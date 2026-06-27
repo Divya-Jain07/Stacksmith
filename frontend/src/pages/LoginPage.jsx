@@ -13,28 +13,28 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Eye, EyeOff, LogIn, AlertCircle, BookOpen } from 'lucide-react'
-import { useAuth }   from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 import { ROLE_ROUTES } from '../constants/roles'
 
 /* ── Animation variants ── */
 const fadeUp = {
-  hidden:  { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } },
-  exit:    { opacity: 0, y: -12, transition: { duration: 0.25 } },
+  exit: { opacity: 0, y: -12, transition: { duration: 0.25 } },
 }
 
 export default function LoginPage() {
-  const navigate  = useNavigate()
-  const location  = useLocation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { isAuth, role, loginStaff, loginMember, loading, error, clearError } = useAuth()
 
-  const [searchParams]           = useSearchParams()
+  const [searchParams] = useSearchParams()
 
   // Pre-select tab from ?tab=member (set by landing page Member button)
   const initialTab = searchParams.get('tab') === 'member' ? 'member' : 'staff'
 
-  const [tab,      setTab]      = useState(initialTab)
-  const [showPwd,  setShowPwd]  = useState(false)
+  const [tab, setTab] = useState(initialTab)
+  const [showPwd, setShowPwd] = useState(false)
   const [formData, setFormData] = useState({ email: '', memberCode: '', password: '' })
 
   /* If already logged in, redirect immediately */
@@ -42,7 +42,7 @@ export default function LoginPage() {
     if (isAuth && role) {
       const defaultDest = ROLE_ROUTES[role] ?? '/'
       const intendedDest = location.state?.from?.pathname
-      
+
       // If there's an intended destination, ensure it matches the user's role's base route
       // so they don't get a 403. Otherwise, send them to their default dashboard.
       let destination = defaultDest
@@ -89,12 +89,12 @@ export default function LoginPage() {
       overflow: 'hidden',
     }}>
       {/* Ambient orb */}
-      <div style={{ position:'absolute', top:'-8%', right:'10%', width:'400px', height:'400px', borderRadius:'50%', background:'rgba(184,134,11,0.07)', filter:'blur(80px)', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:'-5%', left:'5%',  width:'350px', height:'350px', borderRadius:'50%', background:'rgba(47,62,77,0.15)',  filter:'blur(80px)', pointerEvents:'none' }} />
+      <div style={{ position: 'absolute', top: '-8%', right: '10%', width: '400px', height: '400px', borderRadius: '50%', background: 'rgba(184,134,11,0.07)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '-5%', left: '5%', width: '350px', height: '350px', borderRadius: '50%', background: 'rgba(47,62,77,0.15)', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 16 }}
-        animate={{ opacity: 1, scale: 1,    y: 0  }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
         style={{
           width: '100%',
@@ -147,7 +147,7 @@ export default function LoginPage() {
           border: '1px solid rgba(255,255,255,0.07)',
         }}>
           {[
-            { key: 'staff',  label: '🖥️ Staff Portal'  },
+            { key: 'staff', label: '🖥️ Staff Portal' },
             { key: 'member', label: '📚 Member Kiosk' },
           ].map(({ key, label }) => (
             <button
@@ -227,7 +227,7 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   style={{ ...inputStyle, paddingRight: '2.75rem' }}
                   onFocus={e => (e.target.style.borderColor = '#B8860B')}
-                  onBlur={e  => (e.target.style.borderColor = 'rgba(255,255,255,0.10)')}
+                  onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.10)')}
                 />
                 <button
                   type="button"
@@ -241,7 +241,7 @@ export default function LoginPage() {
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'rgba(245,235,221,0.40)',
+                    color: 'var(--text-main)',
                     display: 'flex',
                     alignItems: 'center',
                     padding: '4px',
@@ -385,7 +385,7 @@ function Field({ id, name, type, label, placeholder, value, onChange, autoComple
         required={required}
         style={inputStyle}
         onFocus={e => (e.target.style.borderColor = 'var(--accent-gold)')}
-        onBlur={e  => (e.target.style.borderColor = 'var(--border-color)')}
+        onBlur={e => (e.target.style.borderColor = 'var(--border-color)')}
       />
     </div>
   )
