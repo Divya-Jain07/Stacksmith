@@ -98,7 +98,7 @@ Note: The system also supports a private SuperAdmin role for platform-level admi
 ## Project Structure
 
 ```text
-finalProject/
+Stacksmith/
   backend/
     src/
       config/
@@ -218,9 +218,7 @@ Open `http://localhost:5173` in your browser.
 
 Live Demo:
 
-```text
-Add Vercel frontend link here
-```
+[https://stacksmith-beta.vercel.app](https://stacksmith-beta.vercel.app/)
 
 ## Available Scripts
 
