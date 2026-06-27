@@ -98,7 +98,7 @@ Note: The system also supports a private SuperAdmin role for platform-level admi
 ## Project Structure
 
 ```text
-finalProject/
+Stacksmith/
   backend/
     src/
       config/
