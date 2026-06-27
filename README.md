@@ -218,9 +218,7 @@ Open `http://localhost:5173` in your browser.
 
 Live Demo:
 
-```text
-Add Vercel frontend link here
-```
+[https://stacksmith-beta.vercel.app](https://stacksmith-beta.vercel.app/)
 
 ## Available Scripts
 
