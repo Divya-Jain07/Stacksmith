@@ -243,6 +243,19 @@ exports.changePassword = async (req, res, next) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found.' });
 
+    // --- Demo Account Protection ---
+    const demoAdmin = await User.findOne({ email: 'admin@selfwise.com' });
+    if (demoAdmin) {
+      const demoAdminId = demoAdmin._id.toString();
+      const currentUserId = user._id.toString();
+      const currentUserAdminId = user.adminId ? user.adminId.toString() : null;
+      
+      if (currentUserId === demoAdminId || currentUserAdminId === demoAdminId) {
+        return res.status(403).json({ error: 'This is a demo account. Password changes are disabled.' });
+      }
+    }
+    // -------------------------------
+
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ error: 'Incorrect old password.' });
