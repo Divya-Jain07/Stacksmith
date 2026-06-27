@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, User, MessageSquare } from 'lucide-react'
 import { chatApi } from '../../../services/api'
 import { useAuth } from '../../../context/AuthContext'
+import { useDialog } from '../../../context/DialogContext'
 import { getSocket, disconnectSocket } from '../../../services/socket'
 
 export default function MemberChatHub() {
   const { user } = useAuth()
+  const { notify } = useDialog()
   
   const [conversations, setConversations] = useState([])
   const [activeConv, setActiveConv] = useState(null)
@@ -85,10 +87,10 @@ export default function MemberChatHub() {
 
   const handleStartNewChat = () => {
     const socket = getSocket()
-    if (!socket) return alert('Chat service is disconnected.')
+    if (!socket) return notify('Chat service is disconnected.', 'error')
     
     socket.emit('conversation:new', { text: null }, (res) => {
-      if (res.error) return alert(res.error)
+      if (res.error) return notify(res.error, 'error')
       fetchConversations() // Refresh list
       handleSelectConv(res.conversation)
     })
@@ -99,13 +101,13 @@ export default function MemberChatHub() {
     if (!inputMsg.trim() || !activeConv) return
     
     const socket = getSocket()
-    if (!socket) return alert('Chat service is disconnected.')
+    if (!socket) return notify('Chat service is disconnected.', 'error')
 
     setMsgLoading(true)
     socket.emit('message:send', { conversationId: activeConv._id, text: inputMsg.trim() }, (res) => {
       setMsgLoading(false)
       if (res.error) {
-        alert(res.error)
+        notify(res.error, 'error')
       } else {
         setInputMsg('')
         // message:new event will handle appending it

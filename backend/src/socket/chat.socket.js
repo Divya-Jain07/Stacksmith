@@ -94,14 +94,15 @@ module.exports = (io) => {
         await conversation.save();
         await conversation.populate('memberId', 'name memberCode');
 
+        let firstMessage = null;
         if (sanitized) {
-          const message = new Message({
+          firstMessage = new Message({
             conversationId: conversation._id,
             senderId: userId,
             senderRole: 'Member',
             text: sanitized
           });
-          await message.save();
+          await firstMessage.save();
           await Conversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date() });
         }
 
@@ -111,10 +112,10 @@ module.exports = (io) => {
         // Notify all online librarians of the new unassigned conversation
         io.to(`librarians:${adminId}`).emit('conversation:created', {
           conversation,
-          firstMessage: message
+          firstMessage
         });
 
-        callback?.({ conversation, message });
+        callback?.({ conversation, message: firstMessage });
       } catch (err) {
         callback?.({ error: 'Failed to create conversation.' });
       }

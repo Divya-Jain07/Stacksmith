@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { memberApi, borrowApi } from '../../../services/api'
+import { useDialog } from '../../../context/DialogContext'
 import { Book, DollarSign, XCircle } from 'lucide-react'
 
 export default function MemberHistory() {
   const [borrowings, setBorrowings] = useState([])
+  const { notify, confirm } = useDialog()
   const [fines, setFines] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -32,13 +34,14 @@ export default function MemberHistory() {
   }, [])
 
   const handleCancelRequest = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this book request?')) return;
+    const confirmed = await confirm('Are you sure you want to cancel this book request?', 'Cancel Request');
+    if (!confirmed) return;
     try {
       setCancelLoading(id)
       await borrowApi.cancelMemberRequest(id)
       await fetchData()
     } catch (err) {
-      alert(err.message || 'Failed to cancel request')
+      notify(err.message || 'Failed to cancel request', 'error')
     } finally {
       setCancelLoading(null)
     }
@@ -107,8 +110,8 @@ export default function MemberHistory() {
                   <tr key={b._id} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.9rem', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                     <td style={{ padding: '1rem', fontWeight: 500 }}>{b.bookCopyId?.bookId?.name || 'Unknown Book'}</td>
                     <td style={{ padding: '1rem', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>{b.bookCopyId?.barcode || 'N/A'}</td>
-                    <td style={{ padding: '1rem' }}>{b.borrowedDate ? new Date(b.borrowedDate).toLocaleDateString() : '—'}</td>
-                    <td style={{ padding: '1rem' }}>{b.returnedDate ? new Date(b.returnedDate).toLocaleDateString() : '—'}</td>
+                    <td style={{ padding: '1rem' }}>{b.borrowedDate ? new Date(b.borrowedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '—'}</td>
+                    <td style={{ padding: '1rem' }}>{b.returnedDate ? new Date(b.returnedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '—'}</td>
                     <td style={{ padding: '1rem' }}>
                       <span style={{
                         padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
@@ -162,7 +165,7 @@ export default function MemberHistory() {
                     <td style={{ padding: '1rem', fontWeight: 500 }}>{f.borrowingId?.bookCopyId?.bookId?.name || 'Unknown Book'}</td>
                     <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--text-main)' }}>${f.amountToPay.toFixed(2)}</td>
                     <td style={{ padding: '1rem', textTransform: 'capitalize' }}>{f.reason}</td>
-                    <td style={{ padding: '1rem' }}>{new Date(f.createdAt).toLocaleDateString()}</td>
+                    <td style={{ padding: '1rem' }}>{new Date(f.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}</td>
                     <td style={{ padding: '1rem' }}>
                       <span style={{
                         padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,

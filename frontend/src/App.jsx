@@ -17,6 +17,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
 import { AuthProvider }         from './context/AuthContext'
 import { ThemeProvider }        from './context/ThemeContext'
+import { DialogProvider }       from './context/DialogContext'
 import ProtectedRoute           from './components/auth/ProtectedRoute'
 import { ROLES }                from './constants/roles'
 
@@ -37,6 +38,7 @@ export default function App() {
       */}
       <AuthProvider>
         <ThemeProvider>
+        <DialogProvider>
           <Routes>
           {/* ── Public ─────────────────────────────────────────── */}
           <Route path="/"      element={<LandingPage />} />
@@ -126,6 +128,7 @@ export default function App() {
             }
           />
         </Routes>
+        </DialogProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

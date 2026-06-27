@@ -93,7 +93,7 @@ export default function MemberDashboardHome() {
                   <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Due Date</div>
                     <div style={{ fontSize: '0.9rem', fontWeight: 600, color: isOverdue ? '#EF5350' : '#4CAF50' }}>
-                      {new Date(b.dueDate).toLocaleDateString()}
+                      {new Date(b.dueDate).toLocaleDateString('en-GB').replace(/\//g, '-')}
                     </div>
                   </div>
                 </div>

@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, Upload, Book, X, Edit3, Trash2, Layers } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
+import { useDialog } from '../../../context/DialogContext'
 import { bookApi } from '../../../services/api'
 
 export default function Catalog() {
   const { user } = useAuth()
+  const { notify, confirm } = useDialog()
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -14,7 +16,7 @@ export default function Catalog() {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingBookId, setEditingBookId] = useState(null)
-  const [formData, setFormData] = useState({ name: '', author: '', isbn: '', genre: '', description: '', numberOfCopies: 1 })
+  const [formData, setFormData] = useState({ name: '', author: '', isbn: '', genre: '', publisher: '', yearPublished: '', language: '', description: '', numberOfCopies: 1 })
   const [modalLoading, setModalLoading] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -57,27 +59,28 @@ export default function Catalog() {
       }
       setIsAddModalOpen(false)
       setEditingBookId(null)
-      setFormData({ name: '', author: '', isbn: '', genre: '', description: '', numberOfCopies: 1 })
+      setFormData({ name: '', author: '', isbn: '', genre: '', publisher: '', yearPublished: '', language: '', description: '', numberOfCopies: 1 })
       fetchBooks()
     } catch (err) {
-      alert(err.message || 'Failed to save book')
+      notify(err.message || 'Failed to save book', 'error')
     } finally {
       setModalLoading(false)
     }
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this book?')) return;
+    const confirmed = await confirm('Are you sure you want to delete this book?', 'Delete Book');
+    if (!confirmed) return;
     try {
       await bookApi.deleteBook(id);
       fetchBooks();
     } catch (err) {
-      alert(err.message || 'Failed to delete book. (It might have borrowed copies)');
+      notify(err.message || 'Failed to delete book. (It might have borrowed copies)', 'error');
     }
   }
 
   const handleEdit = (book) => {
-    setFormData({ name: book.name, author: book.author, isbn: book.isbn, genre: book.genre, description: book.description || '', numberOfCopies: book.totalCopies })
+    setFormData({ name: book.name, author: book.author, isbn: book.isbn, genre: book.genre, publisher: book.publisher || '', yearPublished: book.yearPublished || '', language: book.language || '', description: book.description || '', numberOfCopies: book.totalCopies })
     setEditingBookId(book._id)
     setIsAddModalOpen(true)
   }
@@ -117,7 +120,7 @@ export default function Catalog() {
       const copies = await bookApi.getCopies(book._id)
       setBookCopies(copies)
     } catch (err) {
-      alert('Failed to load copies')
+      notify('Failed to load copies', 'error')
     } finally {
       setCopiesLoading(false)
     }
@@ -130,7 +133,7 @@ export default function Catalog() {
       setBookCopies(prev => prev.map(c => c.barcode === barcode ? { ...c, [field]: value } : c))
       fetchBooks() // Refresh catalog counts
     } catch (err) {
-      alert(err.message || 'Failed to update copy')
+      notify(err.message || 'Failed to update copy', 'error')
     }
   }
 
@@ -172,7 +175,7 @@ export default function Catalog() {
           <button onClick={() => fileInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-hover)', color: 'var(--text-main)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>
             <Upload size={16} /> Bulk Import CSV
           </button>
-          <button onClick={() => { setEditingBookId(null); setFormData({ name: '', author: '', isbn: '', genre: '', description: '', numberOfCopies: 1 }); setIsAddModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--accent-gold)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
+          <button onClick={() => { setEditingBookId(null); setFormData({ name: '', author: '', isbn: '', genre: '', publisher: '', yearPublished: '', language: '', description: '', numberOfCopies: 1 }); setIsAddModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--accent-gold)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>
             <Plus size={16} /> Add Book
           </button>
         </div>
@@ -260,6 +263,9 @@ export default function Catalog() {
                 <input placeholder="Author" value={formData.author} onChange={e => setFormData(p => ({...p, author: e.target.value}))} required style={inputStyle} />
                 <input placeholder="ISBN" value={formData.isbn} onChange={e => setFormData(p => ({...p, isbn: e.target.value}))} required style={inputStyle} />
                 <input placeholder="Genre" value={formData.genre} onChange={e => setFormData(p => ({...p, genre: e.target.value}))} required style={inputStyle} />
+                <input placeholder="Publisher" value={formData.publisher} onChange={e => setFormData(p => ({...p, publisher: e.target.value}))} required style={inputStyle} />
+                <input placeholder="Year Published" type="number" value={formData.yearPublished} onChange={e => setFormData(p => ({...p, yearPublished: e.target.value}))} required style={inputStyle} />
+                <input placeholder="Language" value={formData.language} onChange={e => setFormData(p => ({...p, language: e.target.value}))} required style={inputStyle} />
                 {!editingBookId && (
                   <div>
                     <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Initial Copies</label>

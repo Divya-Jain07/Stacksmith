@@ -7,11 +7,13 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Building2, BookOpen, Activity, DollarSign, LogOut, Plus, X, Edit3, Trash2, AlertTriangle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useDialog } from '../../context/DialogContext'
 import { adminApi, authApi } from '../../services/api'
 import ThemeToggle from '../../components/ThemeToggle'
 
 export default function SuperAdminDashboard() {
   const { user, logout } = useAuth()
+  const { notify } = useDialog()
   
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -92,7 +94,7 @@ export default function SuperAdminDashboard() {
       setIsDeleteModalOpen(false)
       await fetchStats()
     } catch (err) {
-      alert(err.message || 'Delete failed')
+      notify(err.message || 'Delete failed', 'error')
     } finally {
       setModalLoading(false)
     }

@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, User, CheckCircle, XCircle, X, Edit3 } from 'lucide-react'
 import { memberApi } from '../../../services/api'
+import { useDialog } from '../../../context/DialogContext'
 
 export default function MemberDirectory() {
   const [members, setMembers] = useState([])
+  const { notify } = useDialog()
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
@@ -62,7 +64,7 @@ export default function MemberDirectory() {
       setViewMemberId(id)
       setIsProfileModalOpen(true)
     } catch (err) {
-      alert('Failed to load profile')
+      notify('Failed to load profile', 'error')
     }
   }
 
@@ -267,7 +269,7 @@ export default function MemberDirectory() {
                   <InfoRow label="Phone" value={profileData.member.userId?.phone || 'N/A'} />
                   <InfoRow label="Membership" value={`${profileData.member.membershipType} (${profileData.member.borrowLimits || 0} limits)`} />
                   <InfoRow label="Status" value={profileData.member.status || 'N/A'} />
-                  <InfoRow label="Expires" value={profileData.member.membershipExpiryDate ? new Date(profileData.member.membershipExpiryDate).toLocaleDateString() : 'N/A'} />
+                  <InfoRow label="Expires" value={profileData.member.membershipExpiryDate ? new Date(profileData.member.membershipExpiryDate).toLocaleDateString('en-GB').replace(/\//g, '-') : 'N/A'} />
                 </div>
               </div>
             </motion.div>

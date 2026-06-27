@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Users, Trash2, Plus, X, Search, ShieldAlert } from 'lucide-react'
 import { adminApi, authApi } from '../../../services/api'
+import { useDialog } from '../../../context/DialogContext'
 
 export default function LibrarianDirectory() {
   const [librarians, setLibrarians] = useState([])
+  const { notify } = useDialog()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
@@ -55,7 +57,7 @@ export default function LibrarianDirectory() {
       setConfirmDelete(null)
       fetchLibrarians()
     } catch (err) {
-      alert(err.message || 'Failed to delete librarian')
+      notify(err.message || 'Failed to delete librarian', 'error')
     } finally {
       setDeleteLoading(false)
     }
@@ -159,7 +161,7 @@ export default function LibrarianDirectory() {
                       </span>
                     </td>
                     <td style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                      {new Date(lib.createdAt).toLocaleDateString()}
+                      {new Date(lib.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       <button

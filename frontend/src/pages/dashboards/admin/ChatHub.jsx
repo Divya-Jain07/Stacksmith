@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageSquare, Send, CheckCircle, User } from 'lucide-react'
 import { chatApi } from '../../../services/api'
 import { getSocket } from '../../../services/socket'
+import { useDialog } from '../../../context/DialogContext'
 
 export default function ChatHub() {
   const [conversations, setConversations] = useState([])
   const [activeChat, setActiveChat] = useState(null)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
+  const { notify, confirm } = useDialog()
   const [loading, setLoading] = useState(true)
   const [msgLoading, setMsgLoading] = useState(false)
   const messagesEndRef = useRef(null)
@@ -104,7 +106,7 @@ export default function ChatHub() {
     if (!input.trim() || !activeChat) return
     
     const socket = getSocket()
-    if (!socket) return alert('Chat service is disconnected.')
+    if (!socket) return notify('Chat service is disconnected.', 'error')
 
     setMsgLoading(true)
     socket.emit('message:send', { conversationId: activeChat, text: input.trim() }, (res) => {
@@ -112,14 +114,14 @@ export default function ChatHub() {
       if (res.error) {
         if (res.error.includes('assigned')) {
           socket.emit('conversation:assign', { conversationId: activeChat }, (assignRes) => {
-            if (assignRes.error) return alert(assignRes.error)
+            if (assignRes.error) return notify(assignRes.error, 'error')
             socket.emit('message:send', { conversationId: activeChat, text: input.trim() }, (retryRes) => {
-              if (retryRes.error) alert(retryRes.error)
+              if (retryRes.error) notify(retryRes.error, 'error')
               else setInput('')
             })
           })
         } else {
-          alert(res.error)
+          notify(res.error, 'error')
         }
       } else {
         setInput('')
@@ -128,13 +130,14 @@ export default function ChatHub() {
   }
 
   const handleCloseChat = async () => {
-    if (!activeChat || !window.confirm('Are you sure you want to close this chat?')) return
+    const confirmed = await confirm('Are you sure you want to close this chat?', 'Close Chat')
+    if (!confirmed) return
     
     const socket = getSocket()
-    if (!socket) return alert('Chat service is disconnected.')
+    if (!socket) return notify('Chat service is disconnected.', 'error')
 
     socket.emit('conversation:close', { conversationId: activeChat }, (res) => {
-      if (res.error) alert(res.error)
+      if (res.error) notify(res.error, 'error')
       else fetchConversations()
     })
   }

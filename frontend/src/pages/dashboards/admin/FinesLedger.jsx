@@ -2,11 +2,13 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, DollarSign, ShieldAlert, Check } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
+import { useDialog } from '../../../context/DialogContext'
 import { ROLES } from '../../../constants/roles'
 import { fineApi, memberApi } from '../../../services/api'
 
 export default function FinesLedger() {
   const { role } = useAuth()
+  const { notify, confirm } = useDialog()
   const [memberCode, setMemberCode] = useState('')
   const [fines, setFines] = useState([])
   const [loading, setLoading] = useState(false)
@@ -25,7 +27,7 @@ export default function FinesLedger() {
       const member = allMembers.find(m => m.memberCode.toLowerCase() === memberCode.toLowerCase())
       
       if (!member) {
-        alert('Member not found with code: ' + memberCode)
+        notify('Member not found with code: ' + memberCode, 'warning')
         return
       }
 
@@ -36,7 +38,7 @@ export default function FinesLedger() {
       setFines(memberFines)
     } catch (err) {
       console.error(err)
-      alert(err.message || 'Error fetching fines')
+      notify(err.message || 'Error fetching fines', 'error')
     } finally {
       setLoading(false)
     }
@@ -50,21 +52,22 @@ export default function FinesLedger() {
       const updatedFines = await fineApi.getMemberFines(searchedMember._id)
       setFines(updatedFines)
     } catch (err) {
-      alert(err.message || 'Payment failed')
+      notify(err.message || 'Payment failed', 'error')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleWaive = async (fineId) => {
-    if (!window.confirm('Are you sure you want to waive this fine?')) return
+    const confirmed = await confirm('Are you sure you want to waive this fine?', 'Waive Fine')
+    if (!confirmed) return
     try {
       setActionLoading(true)
       await fineApi.waiveFine(fineId)
       const updatedFines = await fineApi.getMemberFines(searchedMember._id)
       setFines(updatedFines)
     } catch (err) {
-      alert(err.message || 'Waive failed')
+      notify(err.message || 'Waive failed', 'error')
     } finally {
       setActionLoading(false)
     }
@@ -121,7 +124,7 @@ export default function FinesLedger() {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-                        Created: {new Date(fine.createdAt).toLocaleDateString()}
+                        Created: {new Date(fine.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}
                       </div>
                       
                       {fine.status === 'unpaid' && (

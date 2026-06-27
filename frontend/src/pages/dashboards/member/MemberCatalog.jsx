@@ -2,14 +2,17 @@ import { useState, useEffect } from 'react'
 import { Search, Book, Clock, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { bookApi, borrowApi } from '../../../services/api'
+import { useDialog } from '../../../context/DialogContext'
 
 export default function MemberCatalog() {
   const [books, setBooks] = useState([])
+  const { notify } = useDialog()
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [searchField, setSearchField] = useState('book')
   const [requestLoading, setRequestLoading] = useState(null)
   const [requestModal, setRequestModal] = useState({ open: false, book: null })
+  const [detailsModal, setDetailsModal] = useState(null)
   const fetchBooks = async () => {
     try {
       setLoading(true)
@@ -28,7 +31,7 @@ export default function MemberCatalog() {
 
   const handleRequestBook = async (book) => {
     if (book.availableCopies === 0) {
-      alert('This book is currently out of stock.')
+      notify('This book is currently out of stock.', 'warning')
       return
     }
     setRequestModal({ open: true, book })
@@ -41,10 +44,10 @@ export default function MemberCatalog() {
     try {
       setRequestLoading(book._id)
       await borrowApi.memberRequestBook({ bookId: book._id })
-      alert('Book requested successfully! Please pick it up at the counter.')
+      notify('Book requested successfully! Please pick it up at the counter.', 'success')
       fetchBooks() // Refresh available counts
     } catch (err) {
-      alert(err.message || 'Failed to request book')
+      notify(err.message || 'Failed to request book', 'error')
     } finally {
       setRequestLoading(null)
       setRequestModal({ open: false, book: null })
@@ -113,7 +116,7 @@ export default function MemberCatalog() {
                   <tr key={book._id} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.9rem', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                     <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ width: 32, height: 42, background: 'var(--bg-hover)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Book size={16} color="var(--text-muted)"/></div>
-                      <span style={{ fontWeight: 500 }}>{book.name}</span>
+                      <span onClick={() => setDetailsModal(book)} style={{ fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-gold)' }}>{book.name}</span>
                     </td>
                     <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{book.author}</td>
                     <td style={{ padding: '1rem', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{book.isbn}</td>
@@ -167,6 +170,30 @@ export default function MemberCatalog() {
                 <button onClick={confirmRequest} disabled={requestLoading} style={{ padding: '0.6rem 1rem', borderRadius: '8px', border: 'none', background: 'var(--accent-gold)', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>
                   {requestLoading ? 'Requesting...' : 'Confirm Request'}
                 </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {detailsModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>Book Details</h3>
+                <button onClick={() => setDetailsModal(null)} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20}/></button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', color: 'var(--text-main)', fontSize: '0.95rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Title:</strong> <span>{detailsModal.name}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Author:</strong> <span>{detailsModal.author}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>ISBN:</strong> <span>{detailsModal.isbn}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Genre:</strong> <span>{detailsModal.genre}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Publisher:</strong> <span>{detailsModal.publisher || 'N/A'}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Published:</strong> <span>{detailsModal.yearPublished || 'N/A'}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Language:</strong> <span>{detailsModal.language || 'N/A'}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Availability:</strong> <span>{detailsModal.availableCopies} / {detailsModal.totalCopies}</span></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Description:</strong> <span style={{ lineHeight: '1.4' }}>{detailsModal.description || 'No description available.'}</span></div>
               </div>
             </motion.div>
           </motion.div>
