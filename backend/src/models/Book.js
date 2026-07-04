@@ -14,4 +14,7 @@ const BookSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
+BookSchema.index({ adminId: 1, createdAt: -1 });
+BookSchema.index({ adminId: 1, isbn: 1 });
+
 module.exports = mongoose.model('Book', BookSchema);

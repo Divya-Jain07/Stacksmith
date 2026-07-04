@@ -1,30 +1,40 @@
-# Stacksmith Library Management System
+# Stacksmith
 
-Stacksmith is a full-stack library operations and inventory management system built for admins, librarians, and members. It provides role-based dashboards for managing books, physical copies, members, borrowing workflows, fines, reports, and real-time helpdesk chat.
+Stacksmith is a full-stack, multi-tenant library operations and inventory management system built for admins, librarians, and members. It provides role-based dashboards for managing books, physical copies, members, borrowing workflows, fines, reports, and real-time helpdesk chat.
 
-The project is split into two applications:
+See [`ARCHITECTURE.md`](./ARCHITECTURE.md) for a deeper look at how the system is put together.
 
-- `backend` - Express.js, MongoDB, JWT authentication, REST APIs, and Socket.IO chat
-- `frontend` - React, Vite, Tailwind CSS, role-based dashboards, and Socket.IO client
+## Table of Contents
+
+- [Features](#features)
+- [Demo Credentials](#demo-credentials)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Environment Variables](#environment-variables)
+  - [Installation](#installation)
+  - [Running Locally](#running-locally)
+- [Deployment](#deployment)
+- [Main Routes](#main-routes)
+- [Real-Time Chat](#real-time-chat)
+- [CSV Bulk Import](#csv-bulk-import)
+- [Notes](#notes)
 
 ## Features
 
 ### Admin
-
 - View dashboard analytics and library activity summaries
-- Manage the book catalog
-- Add, update, and delete books
+- Manage the book catalog — add, update, and delete books
 - Add and manage physical book copies
 - Bulk import books from CSV
-- Manage members
-- Manage librarian accounts
+- Manage members and librarian accounts
 - Issue, renew, and return books from the counter console
 - Confirm member borrowing and return requests
 - Track, pay, and waive fines
 - Use the staff chat hub for member support
 
 ### Librarian
-
 - Access operational dashboard metrics
 - Manage catalog records and book copies
 - Handle counter operations for issuing, renewing, and returning books
@@ -33,21 +43,15 @@ The project is split into two applications:
 - Respond to member helpdesk chats
 
 ### Member
-
 - Log in with a member code
 - Browse the catalog
-- Request books
-- Cancel pending requests
-- View borrowing history
-- View fines
+- Request books and cancel pending requests
+- View borrowing history and fines
 - Start and continue helpdesk chat conversations
 
 ### Authentication and Authorization
-
-- JWT-based authentication
-- Separate staff and member login flows
-- Role-based route protection on the frontend
-- Role-based API authorization on the backend
+- JWT-based authentication with separate staff and member login flows
+- Role-based route protection on the frontend and API authorization on the backend
 - Supported roles: `SuperAdmin`, `Admin`, `Librarian`, and `Member`
 
 ## Demo Credentials
@@ -55,7 +59,7 @@ The project is split into two applications:
 For demo purposes, use the following login IDs.
 
 | Role | Login ID |
-| --- | --- |
+|---|---|
 | Admin | `admin@selfwise.com` |
 | Librarian | `jane@selfwise.com` |
 | Librarian | `james@selfwise.com` |
@@ -69,77 +73,60 @@ Password for all demo accounts:
 password123
 ```
 
-Demo users can explore and use the application features available to their role, except changing the password.
-
-Note: The system also supports a private SuperAdmin role for platform-level administration. SuperAdmin credentials are not shared in the public demo.
+Demo users can explore and use the application features available to their role, except changing the password. The system also supports a private SuperAdmin role for platform-level administration; SuperAdmin credentials are not shared in the public demo.
 
 ## Tech Stack
 
-### Frontend
-
-- React
-- Vite
+**Frontend**
+- React + Vite
 - React Router
 - Tailwind CSS
 - Framer Motion
 - Lucide React icons
 - Socket.IO Client
 
-### Backend
-
-- Node.js
-- Express.js
-- MongoDB with Mongoose
-- JSON Web Tokens
-- bcryptjs
-- Multer
+**Backend**
+- Node.js + Express
+- MongoDB + Mongoose
+- JSON Web Tokens + bcryptjs
+- Multer (CSV/file uploads)
 - Socket.IO
 
 ## Project Structure
 
-```text
+```
 Stacksmith/
-  backend/
-    src/
-      config/
-      controllers/
-      middlewares/
-      models/
-      routes/
-      socket/
-      utils/
-      app.js
-      index.js
-    .env.example
-    package.json
-
-  frontend/
-    public/
-    src/
-      components/
-      context/
-      pages/
-      services/
-      constants/
-      App.jsx
-      main.jsx
-    .env.example
-    package.json
+├── backend/
+│   └── src/
+│       ├── config/         # DB connection
+│       ├── controllers/    # admin, auth, book, borrow, chat, fine, member, report logic
+│       ├── middlewares/    # auth (JWT + roles), tenant scoping, logging, error handling
+│       ├── models/         # User, Member, LibrarianStaff, Book, BookCopy, BorrowingHistory,
+│       │                   #   BookReservation, Fine, Conversation, Message
+│       ├── routes/         # /api/admin, /api/auth, /api/books, /api/borrow, /api/chat, etc.
+│       ├── socket/          # Socket.IO chat handler
+│       ├── utils/           # ApiError, catchAsync, fineCalculator, validation
+│       ├── app.js
+│       └── index.js
+└── frontend/
+    └── src/
+        ├── components/      # Landing sections, Navbar, auth/ProtectedRoute, layout
+        ├── context/          # Auth, Theme, Dialog context
+        ├── pages/            # LoginPage, UnauthorizedPage, and role dashboards
+        │   └── dashboards/   # SuperAdmin, Admin, Librarian, Member dashboards
+        ├── services/         # REST API client + Socket.IO client
+        └── constants/        # Role constants
 ```
 
-## Prerequisites
+## Getting Started
 
-Make sure the following are installed:
+### Prerequisites
+- Node.js and npm
+- A MongoDB Atlas account or a local MongoDB instance
 
-- Node.js
-- npm
-- MongoDB Atlas account or a local MongoDB instance
+### Environment Variables
 
-## Environment Variables
-
-### Backend
-
-Create a `.env` file inside `backend` using `backend/.env.example` as a reference.
+**Backend** — create a `.env` file inside `backend/` (see `backend/.env.example`):
 
 ```env
 PORT=5000
@@ -149,125 +136,54 @@ JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d
 ```
 
-### Frontend
-
-Create a `.env.local` file inside `frontend` if you need to override the API URL.
+**Frontend** — create a `.env.local` file inside `frontend/` if you need to override the API URL:
 
 ```env
 VITE_API_URL=
 ```
 
-When `VITE_API_URL` is empty, the Vite development server proxies `/api` requests to `http://localhost:5000`.
+When `VITE_API_URL` is empty, the Vite dev server proxies `/api` requests to `http://localhost:5000`. For production, set it to the deployed backend URL.
 
-For production, set `VITE_API_URL` to the deployed backend URL.
-
-## Installation
-
-Clone the repository and install dependencies for both applications.
+### Installation
 
 ```bash
 git clone <repository-url>
-cd finalProject
+cd Stacksmith
+
+cd backend && npm install
+cd ../frontend && npm install
 ```
 
-Install backend dependencies:
+### Running Locally
 
-```bash
-cd backend
-npm install
-```
-
-Install frontend dependencies:
-
-```bash
-cd ../frontend
-npm install
-```
-
-## Running Locally
-
-Start the backend server:
+Start the backend:
 
 ```bash
 cd backend
 npm run dev
 ```
 
-The backend runs on:
+Runs at `http://localhost:5000`.
 
-```text
-http://localhost:5000
-```
-
-Start the frontend development server in a separate terminal:
+Start the frontend in a separate terminal:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-The frontend runs on:
-
-```text
-http://localhost:5173
-```
-
-Open `http://localhost:5173` in your browser.
+Runs at `http://localhost:5173`. Open that URL in your browser.
 
 ## Deployment
 
-Live Demo:
-
-[https://stacksmith-beta.vercel.app](https://stacksmith-beta.vercel.app/)
-
-## Available Scripts
-
-### Backend
-
-```bash
-npm run dev
-```
-
-Starts the backend using Nodemon.
-
-```bash
-npm start
-```
-
-Starts the backend using Node.
-
-### Frontend
-
-```bash
-npm run dev
-```
-
-Starts the Vite development server.
-
-```bash
-npm run build
-```
-
-Builds the frontend for production.
-
-```bash
-npm run preview
-```
-
-Previews the production build locally.
-
-```bash
-npm run lint
-```
-
-Runs Oxlint.
+Live demo: [stacksmith-beta.vercel.app](https://stacksmith-beta.vercel.app/)
 
 ## Main Routes
 
-### Frontend
+**Frontend**
 
 | Route | Description |
-| --- | --- |
+|---|---|
 | `/` | Public landing page |
 | `/login` | Unified login page |
 | `/super-admin/*` | Super admin dashboard |
@@ -276,26 +192,24 @@ Runs Oxlint.
 | `/member/*` | Member dashboard |
 | `/unauthorized` | Unauthorized access page |
 
-### Backend API
-
-All backend API routes are prefixed with `/api`.
+**Backend API** — all routes are prefixed with `/api`
 
 | API Route | Purpose |
-| --- | --- |
-| `/api/auth` | Registration, staff login, member login, password change |
-| `/api/admin` | Admin analytics and librarian management |
-| `/api/books` | Book catalog and book copy management |
-| `/api/copies` | Physical copy updates |
-| `/api/members` | Member management and member account data |
+|---|---|
+| `/api/auth` | SuperAdmin bootstrap, admin/librarian creation, staff/member login, password change |
+| `/api/admin` | Cross-tenant analytics, librarian and admin management (SuperAdmin/Admin) |
+| `/api/books` | Book catalog, copies, and CSV bulk import |
+| `/api/copies` | Manual copy status/condition updates |
+| `/api/members` | Member management and self-service data |
 | `/api/borrow` | Issue, return, renew, and borrowing requests |
-| `/api/reservations` | Book reservations |
+| `/api/reservations` | Book reservations / catalog holds |
 | `/api/fines` | Fine tracking, payment, and waiver |
-| `/api/reports` | Dashboard reports |
+| `/api/reports` | Dashboard analytics |
 | `/api/chat` | Chat conversations and messages |
 
 ## Real-Time Chat
 
-The backend creates a shared HTTP server for Express and Socket.IO. Socket.IO is used for real-time chat between members and staff.
+The backend creates a single shared HTTP server for both Express and Socket.IO. Socket.IO handles real-time chat between members and staff — conversation creation, claiming/assignment, messaging, and closing all happen over WebSocket events rather than REST polling.
 
 Default local WebSocket endpoint:
 
@@ -319,22 +233,6 @@ Example:
 Title,Author,ISBN,Genre,Language,Publisher,YearPublished,Copies,description
 Atomic Habits,James Clear,9780735211292,Self-help,English,Avery,2018,5,A practical guide to building better habits.
 The Alchemist,Paulo Coelho,9780061122415,Fiction,English,HarperOne,1988,3,A philosophical novel about dreams and destiny.
-```
-
-## Production Build
-
-Build the frontend:
-
-```bash
-cd frontend
-npm run build
-```
-
-Run the backend in production mode with a production MongoDB connection string and a strong `JWT_SECRET`.
-
-```bash
-cd backend
-npm start
 ```
 
 ## Notes

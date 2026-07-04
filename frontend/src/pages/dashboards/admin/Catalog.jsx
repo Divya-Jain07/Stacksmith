@@ -26,8 +26,15 @@ export default function Catalog() {
   const [importNotice, setImportNotice] = useState(null)
 
   const fetchBooks = async () => {
-    try {
+    const cachedBooks = bookApi.getCachedBooks()
+    if (cachedBooks) {
+      setBooks(cachedBooks)
+      setLoading(false)
+    } else {
       setLoading(true)
+    }
+
+    try {
       const data = await bookApi.getBooks()
       setBooks(data)
     } catch (err) {

@@ -42,6 +42,12 @@ export default function CounterConsole() {
     const interval = setInterval(fetchPending, 15000)
     
     const fetchBooks = async () => {
+      const cachedBooks = bookApi.getCachedBooks()
+      if (cachedBooks) {
+        setBooks(cachedBooks)
+        return
+      }
+
       try {
         const data = await bookApi.getBooks()
         setBooks(data)
@@ -325,4 +331,3 @@ const inputStyle = {
   border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)',
   fontSize: '0.95rem', boxSizing: 'border-box', outline: 'none'
 }
-

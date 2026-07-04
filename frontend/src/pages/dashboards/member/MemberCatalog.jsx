@@ -8,16 +8,25 @@ export default function MemberCatalog() {
   const [books, setBooks] = useState([])
   const { notify } = useDialog()
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [searchField, setSearchField] = useState('book')
   const [requestLoading, setRequestLoading] = useState(null)
   const [requestModal, setRequestModal] = useState({ open: false, book: null })
   const [detailsModal, setDetailsModal] = useState(null)
   const fetchBooks = async () => {
-    try {
+    const cachedBooks = bookApi.getCachedBooks()
+    if (cachedBooks) {
+      setBooks(cachedBooks)
+      setLoading(false)
+    } else {
       setLoading(true)
+    }
+
+    try {
       const data = await bookApi.getBooks()
       setBooks(data)
+      setError(null)
     } catch (err) {
       setError('Failed to load the library catalog')
     } finally {
@@ -72,6 +81,11 @@ export default function MemberCatalog() {
       </div>
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
+        {error && (
+          <div style={{ padding: '0.85rem 1rem', color: '#EF9A9A', background: 'rgba(239,83,80,0.12)', borderBottom: '1px solid rgba(239,83,80,0.22)' }}>
+            {error}
+          </div>
+        )}
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
           <div style={{ position: 'relative', maxWidth: '500px', display: 'flex', gap: '0.5rem' }}>
             <select 

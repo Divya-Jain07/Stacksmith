@@ -46,6 +46,62 @@ const put    = (path, body)  => request('PUT',    path, body)
 const patch  = (path, body)  => request('PATCH',  path, body)
 const del    = (path)        => request('DELETE', path)
 
+const CATALOG_CACHE_TTL = 60_000
+const catalogCache = new Map()
+
+const getCatalogCacheKey = (params = '') => params || '__all__'
+
+function getCachedCatalog(params = '') {
+  const cached = catalogCache.get(getCatalogCacheKey(params))
+  return cached?.data ?? null
+}
+
+function clearCatalogCache() {
+  catalogCache.clear()
+}
+
+async function getBooksWithCache(params = '', options = {}) {
+  const key = getCatalogCacheKey(params)
+  const cached = catalogCache.get(key)
+  const now = Date.now()
+
+  if (!options.force && cached?.data && now - cached.timestamp < CATALOG_CACHE_TTL) {
+    return cached.data
+  }
+
+  if (!options.force && cached?.promise) {
+    return cached.promise
+  }
+
+  const promise = get(`/api/books${params}`)
+    .then((data) => {
+      catalogCache.set(key, { data, timestamp: Date.now(), promise: null })
+      return data
+    })
+    .catch((error) => {
+      if (cached?.data) {
+        catalogCache.set(key, { ...cached, promise: null })
+      } else {
+        catalogCache.delete(key)
+      }
+      throw error
+    })
+
+  catalogCache.set(key, {
+    data: cached?.data ?? null,
+    timestamp: cached?.timestamp ?? 0,
+    promise
+  })
+
+  return promise
+}
+
+async function mutateCatalog(mutator) {
+  const data = await mutator()
+  clearCatalogCache()
+  return data
+}
+
 /* ── Auth endpoints ─────────────────────────────────────────────────────── */
 
 export const authApi = {
@@ -112,18 +168,20 @@ export const reportApi = {
 }
 
 export const bookApi = {
-  getBooks: (params = '') => get(`/api/books${params}`),
+  getBooks: (params = '', options = {}) => getBooksWithCache(params, options),
+  getCachedBooks: (params = '') => getCachedCatalog(params),
+  clearCache: clearCatalogCache,
   getBookById: (id) => get(`/api/books/${id}`),
-  createBook: (data) => post('/api/books', data),
-  updateBook: (id, data) => put(`/api/books/${id}`, data),
-  deleteBook: (id) => del(`/api/books/${id}`),
-  addCopy: (bookId, data) => post(`/api/books/${bookId}/copies`, data),
+  createBook: (data) => mutateCatalog(() => post('/api/books', data)),
+  updateBook: (id, data) => mutateCatalog(() => put(`/api/books/${id}`, data)),
+  deleteBook: (id) => mutateCatalog(() => del(`/api/books/${id}`)),
+  addCopy: (bookId, data) => mutateCatalog(() => post(`/api/books/${bookId}/copies`, data)),
   getCopies: (bookId) => get(`/api/books/${bookId}/copies`),
-  updateCopy: (barcode, data) => put(`/api/copies/${barcode}`, data),
+  updateCopy: (barcode, data) => mutateCatalog(() => put(`/api/copies/${barcode}`, data)),
   bulkImport: (formData) => {
     // Requires a custom fetch since it uses FormData, not JSON.
     const token = localStorage.getItem('stacksmith_token')
-    return fetch(`${BASE}/api/books/bulk-import`, {
+    return mutateCatalog(() => fetch(`${BASE}/api/books/bulk-import`, {
       method: 'POST',
       headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
       body: formData
@@ -134,24 +192,24 @@ export const bookApi = {
         throw Object.assign(new Error(message), { status: res.status, data })
       }
       return data
-    })
+    }))
   }
 }
 
 export const borrowApi = {
   // Members
-  memberRequestBook: (data) => post('/api/borrow/request', data),
-  cancelMemberRequest: (id) => del(`/api/borrow/${id}/cancel`),
+  memberRequestBook: (data) => mutateCatalog(() => post('/api/borrow/request', data)),
+  cancelMemberRequest: (id) => mutateCatalog(() => del(`/api/borrow/${id}/cancel`)),
   
   // Staff
-  issueBook: (data) => post('/api/borrow/issue', data),
-  returnBook: (data) => post('/api/borrow/return', data),
-  renewBorrowing: (data) => post('/api/borrow/renew', data),
+  issueBook: (data) => mutateCatalog(() => post('/api/borrow/issue', data)),
+  returnBook: (data) => mutateCatalog(() => post('/api/borrow/return', data)),
+  renewBorrowing: (data) => mutateCatalog(() => post('/api/borrow/renew', data)),
   
   // Requests
   getPendingRequests: () => get('/api/borrow/pending'),
-  confirmIssue: (id, data) => patch(`/api/borrow/${id}/confirm-issue`, data),
-  confirmReturn: (id) => patch(`/api/borrow/${id}/confirm-return`)
+  confirmIssue: (id, data) => mutateCatalog(() => patch(`/api/borrow/${id}/confirm-issue`, data)),
+  confirmReturn: (id) => mutateCatalog(() => patch(`/api/borrow/${id}/confirm-return`))
 }
 
 export const memberApi = {
