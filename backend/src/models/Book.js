@@ -12,6 +12,9 @@ const BookSchema = new mongoose.Schema({
   description: { type: String },
   publisher: { type: String, required: true },
   yearPublished: { type: Number, required: true },
+  embedding: { type: [Number] },
+  embeddingHash: { type: String },
+  embeddingModel: { type: String },
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 

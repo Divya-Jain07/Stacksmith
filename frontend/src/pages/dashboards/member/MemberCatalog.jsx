@@ -130,7 +130,7 @@ export default function MemberCatalog() {
                   <tr key={book._id} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.9rem', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                     <td style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                       <div style={{ width: 32, height: 42, background: 'var(--bg-hover)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Book size={16} color="var(--text-muted)"/></div>
-                      <span onClick={() => setDetailsModal(book)} style={{ fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-gold)' }}>{book.name}</span>
+                      <span onClick={() => openDetails(book)} style={{ fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', color: 'var(--accent-gold)' }}>{book.name}</span>
                     </td>
                     <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>{book.author}</td>
                     <td style={{ padding: '1rem', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{book.isbn}</td>
@@ -208,6 +208,29 @@ export default function MemberCatalog() {
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Language:</strong> <span>{detailsModal.language || 'N/A'}</span></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Availability:</strong> <span>{detailsModal.availableCopies} / {detailsModal.totalCopies}</span></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Description:</strong> <span style={{ lineHeight: '1.4' }}>{detailsModal.description || 'No description available.'}</span></div>
+              </div>
+              
+              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+                <h4 style={{ color: 'var(--text-main)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>More like this ✨</h4>
+                {similarLoading ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Finding similar books...</div>
+                ) : similarBooks.length > 0 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {similarBooks.map(sim => (
+                      <div key={sim._id} onClick={() => openDetails(sim)} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}>
+                        <div>
+                          <div style={{ color: 'var(--accent-gold)', fontWeight: 500, fontSize: '0.95rem' }}>{sim.name}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>{sim.author}</div>
+                        </div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                          {Math.round(sim.similarity * 100)}% match
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No similar books found in this branch.</div>
+                )}
               </div>
             </motion.div>
           </motion.div>

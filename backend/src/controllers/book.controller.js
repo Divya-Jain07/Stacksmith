@@ -4,6 +4,7 @@ const Book = require('../models/Book');
 const BookCopy = require('../models/BookCopy');
 const fs = require('fs');
 const csv = require('csv-parser');
+const embeddingService = require('../services/embedding.service');
 
 const buildTenantScopeFilter = (req) => {
   const adminId = req.tenantFilter?.adminId;
@@ -314,3 +315,153 @@ exports.updateCopy = catchAsync(async (req, res, next) => {
 
     res.json({ message: 'Book copy updated successfully.', copy });
   });
+
+// Hybrid search (Keyword + Semantic with RRF)
+exports.searchBooks = catchAsync(async (req, res, next) => {
+  const query = req.query.q;
+  if (!query) {
+    return res.json([]);
+  }
+
+  const filter = req.tenantFilter || {};
+  
+  // 1. Keyword Search (Regex based)
+  const regex = new RegExp(query, 'i');
+  const keywordResults = await Book.find({
+    ...filter,
+    $or: [
+      { name: regex },
+      { author: regex },
+      { genre: regex }
+    ]
+  }).lean();
+
+  let finalResults = [];
+
+  // 2. Semantic Search (if embedding service is configured)
+  if (embeddingService.isConfigured()) {
+    try {
+      const queryEmbedding = await embeddingService.generateEmbedding(query);
+      
+      const allBooks = await Book.find({ ...filter, embedding: { $exists: true, $ne: [] } }).lean();
+      
+      const semanticResults = allBooks.map(book => {
+        const similarity = embeddingService.cosineSimilarity(queryEmbedding, book.embedding);
+        return { ...book, similarity };
+      })
+      .filter(b => b.similarity > 0.4)
+      .sort((a, b) => b.similarity - a.similarity);
+
+      // 3. Reciprocal Rank Fusion (RRF)
+      const rrfScores = new Map();
+      const RRF_K = 60;
+
+      keywordResults.forEach((book, index) => {
+        const score = 1 / (RRF_K + index + 1);
+        rrfScores.set(book._id.toString(), { book, score });
+      });
+
+      semanticResults.forEach((book, index) => {
+        const score = 1 / (RRF_K + index + 1);
+        const existing = rrfScores.get(book._id.toString());
+        if (existing) {
+          existing.score += score;
+        } else {
+          rrfScores.set(book._id.toString(), { book, score });
+        }
+      });
+
+      finalResults = Array.from(rrfScores.values())
+        .sort((a, b) => b.score - a.score)
+        .map(item => item.book);
+    } catch (err) {
+      console.error('Semantic search failed:', err.message);
+      finalResults = keywordResults;
+    }
+  } else {
+    finalResults = keywordResults;
+  }
+
+  const bookIds = finalResults.map(b => b._id);
+  const copyAgg = await BookCopy.aggregate([
+    { $match: { ...filter, bookId: { $in: bookIds } } },
+    {
+      $group: {
+        _id: '$bookId',
+        totalCopies: { $sum: 1 },
+        availableCopies: {
+          $sum: { $cond: [{ $eq: ['$status', 'available'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  const countMap = {};
+  for (const row of copyAgg) {
+    countMap[String(row._id)] = { totalCopies: row.totalCopies, availableCopies: row.availableCopies };
+  }
+
+  const booksWithCounts = finalResults.map((book) => {
+    delete book.embedding;
+    const counts = countMap[String(book._id)] || { totalCopies: 0, availableCopies: 0 };
+    return { ...book, ...counts };
+  });
+
+  res.json(booksWithCounts.slice(0, 20));
+});
+
+// Get similar books (Semantic)
+exports.getSimilarBooks = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const filter = req.tenantFilter || {};
+
+  const targetBook = await Book.findOne({ _id: id, ...filter }).lean();
+  if (!targetBook) {
+    throw new ApiError(404, 'Book not found');
+  }
+
+  if (!embeddingService.isConfigured() || !targetBook.embedding || targetBook.embedding.length === 0) {
+    return res.json([]);
+  }
+
+  const allBooks = await Book.find({ 
+    _id: { $ne: id }, 
+    ...filter, 
+    embedding: { $exists: true, $ne: [] } 
+  }).lean();
+
+  const similar = allBooks.map(book => {
+    const similarity = embeddingService.cosineSimilarity(targetBook.embedding, book.embedding);
+    return { ...book, similarity };
+  })
+  .filter(b => b.similarity > 0.6)
+  .sort((a, b) => b.similarity - a.similarity)
+  .slice(0, 5);
+
+  const bookIds = similar.map(b => b._id);
+  const copyAgg = await BookCopy.aggregate([
+    { $match: { ...filter, bookId: { $in: bookIds } } },
+    {
+      $group: {
+        _id: '$bookId',
+        totalCopies: { $sum: 1 },
+        availableCopies: {
+          $sum: { $cond: [{ $eq: ['$status', 'available'] }, 1, 0] }
+        }
+      }
+    }
+  ]);
+
+  const countMap = {};
+  for (const row of copyAgg) {
+    countMap[String(row._id)] = { totalCopies: row.totalCopies, availableCopies: row.availableCopies };
+  }
+
+  const result = similar.map((book) => {
+    delete book.embedding;
+    const counts = countMap[String(book._id)] || { totalCopies: 0, availableCopies: 0 };
+    return { ...book, ...counts };
+  });
+
+  res.json(result);
+});

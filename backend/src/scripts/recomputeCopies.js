@@ -9,14 +9,14 @@ const recomputeCopies = async () => {
     await connectDB();
     console.log('Connected to DB. Starting recomputation of copies...');
 
-    const books = await Book.find({});
+    const books = await Book.find({}).crossTenant('script');
     console.log(`Found ${books.length} books to process.`);
 
     let updated = 0;
 
     for (const book of books) {
-      const totalCopies = await BookCopy.countDocuments({ bookId: book._id });
-      const availableCopies = await BookCopy.countDocuments({ bookId: book._id, status: 'available' });
+      const totalCopies = await BookCopy.countDocuments({ bookId: book._id }).crossTenant('script');
+      const availableCopies = await BookCopy.countDocuments({ bookId: book._id, status: 'available' }).crossTenant('script');
 
       if (book.totalCopies !== totalCopies || book.availableCopies !== availableCopies) {
         book.totalCopies = totalCopies;
