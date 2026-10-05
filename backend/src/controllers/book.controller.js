@@ -253,7 +253,9 @@ exports.addCopy = catchAsync(async (req, res, next) => {
     }
 
     const count = parseInt(numberOfCopies, 10) || 1;
-    const copies = await generateCopiesForBook(book, book.isbn, count, req.body.adminId || req.user.adminId);
+    // Always take adminId from the verified token, never from req.body.
+    const adminId = req.tenantFilter?.adminId || req.user.adminId;
+    const copies = await generateCopiesForBook(book, book.isbn, count, adminId);
 
     // Apply condition if provided
     if (condition && condition !== 'perfect') {

@@ -1,4 +1,7 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 const Member = require('../models/Member');
+const User = require('../models/User');
 const BorrowingHistory = require('../models/BorrowingHistory');
 const Fine = require('../models/Fine');
 const Book = require('../models/Book');
@@ -18,17 +21,20 @@ exports.createMember = async (req, res, next) => {
       return res.status(400).json({ error: 'Member with this email already exists.' });
     }
 
-    const User = require('../models/User');
     const existingUser = await User.findOne({ email: emailId });
     if (existingUser) {
       return res.status(400).json({ error: 'User with this email already exists.' });
     }
 
-    const bcrypt = require('bcryptjs');
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password || 'password123', salt);
+    // Generate a random temp password if none supplied; never fall back to a known default.
+    let tempPassword = null;
+    const passwordToHash = password || (() => { tempPassword = crypto.randomBytes(8).toString('hex'); return tempPassword; })();
 
-    const adminId = req.body.adminId || req.user.adminId;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(passwordToHash, salt);
+
+    // Always take the tenant from the verified token — never from the request body.
+    const adminId = req.tenantFilter?.adminId || req.user.adminId;
 
     const user = new User({
       name,
@@ -68,7 +74,7 @@ exports.createMember = async (req, res, next) => {
     res.status(201).json({
       message: 'Member registered successfully. They can now login using their memberCode.',
       member,
-      defaultPassword: password ? undefined : 'password123'
+      ...(tempPassword && { temporaryPassword: tempPassword })
     });
   } catch (err) {
     next(err);
