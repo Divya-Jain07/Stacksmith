@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const BookReservationSchema = new mongoose.Schema({
   requestedUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
@@ -8,4 +9,8 @@ const BookReservationSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('BookReservation', BookReservationSchema);
+BookReservationSchema.plugin(tenantGuardPlugin);
+
+const BookReservation = mongoose.model('BookReservation', BookReservationSchema);
+patchAggregateForModel(BookReservation);
+module.exports = BookReservation;

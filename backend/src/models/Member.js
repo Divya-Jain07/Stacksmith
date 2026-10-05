@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const MemberSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -12,4 +13,8 @@ const MemberSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Member', MemberSchema);
+MemberSchema.plugin(tenantGuardPlugin);
+
+const Member = mongoose.model('Member', MemberSchema);
+patchAggregateForModel(Member);
+module.exports = Member;

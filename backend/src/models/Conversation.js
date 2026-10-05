@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const ConversationSchema = new mongoose.Schema({
   memberId: { type: mongoose.Schema.Types.ObjectId, ref: 'Member', required: true },
@@ -9,4 +10,8 @@ const ConversationSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Conversation', ConversationSchema);
+ConversationSchema.plugin(tenantGuardPlugin);
+
+const Conversation = mongoose.model('Conversation', ConversationSchema);
+patchAggregateForModel(Conversation);
+module.exports = Conversation;

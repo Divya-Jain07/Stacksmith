@@ -181,7 +181,9 @@ exports.staffLogin = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
-    const staff = await LibrarianStaff.findOne({ userId: user._id });
+    // Scope by adminId now that we know the user. Admin is their own tenant root.
+    const staffAdminId = user.adminId || user._id;
+    const staff = await LibrarianStaff.findOne({ userId: user._id, adminId: staffAdminId });
     const profileId = staff ? staff._id : null;
     const token = generateToken(user, profileId);
 
@@ -209,7 +211,9 @@ exports.memberLogin = async (req, res, next) => {
   try {
     const { memberCode, password } = req.body;
 
-    const member = await Member.findOne({ memberCode }).populate('userId');
+    // Member login happens before the tenant is known — the memberCode is globally unique.
+    // This is a legitimate cross-tenant lookup.
+    const member = await Member.findOne({ memberCode }).crossTenant('member login: tenant unknown before authentication').populate('userId');
     if (!member || !member.userId) {
       return res.status(401).json({ error: 'Invalid member code or password.' });
     }

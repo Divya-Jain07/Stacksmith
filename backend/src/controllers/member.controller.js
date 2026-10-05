@@ -100,7 +100,7 @@ exports.getMemberById = async (req, res, next) => {
 
     // Fetch borrow history
     const borrowHistory = await BorrowingHistory.find({ memberId: member._id, ...(req.tenantFilter || {}) })
-      .populate('bookCopyId')
+      .populate({ path: 'bookCopyId', match: req.tenantFilter || {} })
       .sort({ borrowedDate: -1 });
 
     // Fetch outstanding fines
@@ -124,7 +124,7 @@ exports.getMemberById = async (req, res, next) => {
     const genreMap = {};
     for (const h of borrowHistory) {
       if (h.bookCopyId) {
-        const book = await Book.findById(h.bookCopyId.bookId);
+        const book = await Book.findOne({ _id: h.bookCopyId.bookId, adminId: member.adminId });
         if (book) {
           genreMap[book.genre] = (genreMap[book.genre] || 0) + 1;
         }
@@ -186,7 +186,8 @@ exports.getMyBorrowings = async (req, res, next) => {
     const history = await BorrowingHistory.find(filter)
       .populate({
         path: 'bookCopyId',
-        populate: { path: 'bookId' }
+        match: req.tenantFilter || {},
+        populate: { path: 'bookId', match: req.tenantFilter || {} }
       })
       .sort({ createdAt: -1 });
 
@@ -206,9 +207,11 @@ exports.getMyFines = async (req, res, next) => {
     const fines = await Fine.find(filter)
       .populate({
         path: 'borrowingId',
+        match: req.tenantFilter || {},
         populate: {
           path: 'bookCopyId',
-          populate: { path: 'bookId' }
+          match: req.tenantFilter || {},
+          populate: { path: 'bookId', match: req.tenantFilter || {} }
         }
       })
       .sort({ createdAt: -1 });

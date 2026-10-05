@@ -46,13 +46,16 @@ module.exports = (io) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = decoded; // { id, role, adminId, profileId }
 
-      // Fetch the profile (Member or LibrarianStaff) to confirm it exists
+      // Fetch the profile (Member or LibrarianStaff) to confirm it exists.
+      // Scope by adminId from the token — it is known at connect time.
       if (decoded.role === 'Member') {
-        const member = await Member.findOne({ userId: decoded.id });
+        const member = await Member.findOne({ userId: decoded.id, adminId: decoded.adminId });
         if (!member) return next(new Error('Member profile not found.'));
         socket.memberProfile = member;
       } else if (decoded.role === 'Librarian' || decoded.role === 'Admin') {
-        const staff = await LibrarianStaff.findOne({ userId: decoded.id });
+        // Admin is their own tenant root: adminId in token equals their _id
+        const staffAdminId = decoded.adminId || decoded.id;
+        const staff = await LibrarianStaff.findOne({ userId: decoded.id, adminId: staffAdminId });
         if (!staff) return next(new Error('Staff profile not found.'));
         socket.staffProfile = staff;
       } else {

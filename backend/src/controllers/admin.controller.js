@@ -105,8 +105,8 @@ exports.updateAdmin = async (req, res, next) => {
     if (phone) user.phone = phone;
     await user.save();
 
-    // Update LibrarianStaff profile
-    const staffProfile = await require('../models/LibrarianStaff').findOne({ userId: id });
+    // Update LibrarianStaff profile (SuperAdmin cross-tenant lookup by userId)
+    const staffProfile = await LibrarianStaff.findOne({ userId: id }).crossTenant('SuperAdmin updateAdmin: cross-tenant admin profile lookup by userId');
     if (staffProfile) {
       if (name) staffProfile.name = name;
       if (email) staffProfile.emailId = email;
@@ -132,7 +132,7 @@ exports.deleteAdmin = async (req, res, next) => {
       return res.status(404).json({ error: 'Admin not found.' });
     }
 
-    const LibrarianStaff = require('../models/LibrarianStaff');
+    const LibrarianStaff = require('../models/LibrarianStaff');  // already imported at top but re-declared inside block for clarity
     const BookCopy = require('../models/BookCopy');
     const BookReservation = require('../models/BookReservation');
     const Conversation = require('../models/Conversation');
@@ -141,6 +141,7 @@ exports.deleteAdmin = async (req, res, next) => {
     const Fine = require('../models/Fine');
 
     // Remove all tenant data tied to this admin branch
+    // These deleteMany calls include adminId: id — correctly scoped to the target branch.
     await Promise.all([
       BookCopy.deleteMany({ adminId: id }),
       BookReservation.deleteMany({ adminId: id }),

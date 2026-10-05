@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const LibrarianStaffSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -9,4 +10,8 @@ const LibrarianStaffSchema = new mongoose.Schema({
   emailId: { type: String, required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('LibrarianStaff', LibrarianStaffSchema);
+LibrarianStaffSchema.plugin(tenantGuardPlugin);
+
+const LibrarianStaff = mongoose.model('LibrarianStaff', LibrarianStaffSchema);
+patchAggregateForModel(LibrarianStaff);
+module.exports = LibrarianStaff;

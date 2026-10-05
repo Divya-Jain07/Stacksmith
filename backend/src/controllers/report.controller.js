@@ -6,20 +6,27 @@ const Member = require('../models/Member');
 exports.getDashboard = async (req, res, next) => {
   try {
     const tenantFilter = req.tenantFilter || {};
+    // When tenantFilter has no adminId (SuperAdmin), queries are intentionally cross-tenant.
+    const isCrossTenant = !tenantFilter.adminId;
+    const CT = 'SuperAdmin getDashboard: intentional cross-tenant aggregate stats view';
 
     // 1. Total active borrowings
-    const activeBorrows = await BorrowingHistory.countDocuments({ returnedDate: null, ...tenantFilter });
+    const activeBorrowsQ = BorrowingHistory.countDocuments({ returnedDate: null, ...tenantFilter });
+    if (isCrossTenant) activeBorrowsQ.crossTenant(CT);
+    const activeBorrows = await activeBorrowsQ;
 
     // 2. Overdue books count
-    const overdueBorrows = await BorrowingHistory.countDocuments({
+    const overdueQ = BorrowingHistory.countDocuments({
       returnedDate: null,
       dueDate: { $lt: new Date() },
       ...tenantFilter
     });
+    if (isCrossTenant) overdueQ.crossTenant(CT);
+    const overdueBorrows = await overdueQ;
 
     // 3. Fines collected vs pending
-    const fines = await Fine.aggregate([
-      { $match: tenantFilter },
+    const finesAgg = Fine.aggregate([
+      { $match: isCrossTenant ? {} : tenantFilter },
       { $group: {
           _id: '$status',
           totalAmount: { $sum: '$amountToPay' },
@@ -27,6 +34,8 @@ exports.getDashboard = async (req, res, next) => {
         }
       }
     ]);
+    if (isCrossTenant) finesAgg.crossTenant(CT);
+    const fines = await finesAgg;
 
     let finesCollected = 0;
     let finesPending = 0;
@@ -36,17 +45,24 @@ exports.getDashboard = async (req, res, next) => {
     });
 
     // 4. Most active members (by borrow count)
-    const activeMembers = await BorrowingHistory.aggregate([
-      { $match: tenantFilter },
+    const activeMembersAgg = BorrowingHistory.aggregate([
+      { $match: isCrossTenant ? {} : tenantFilter },
       { $group: { _id: '$memberId', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 5 }
     ]);
+    if (isCrossTenant) activeMembersAgg.crossTenant(CT);
+    const activeMembers = await activeMembersAgg;
+
     const memberIds = activeMembers.map(m => m._id);
-    const membersData = await Member.find({ _id: { $in: memberIds }, ...tenantFilter }).select('name memberCode');
+    const membersDataQ = Member.find({ _id: { $in: memberIds }, ...tenantFilter }).select('name memberCode');
+    if (isCrossTenant) membersDataQ.crossTenant(CT);
+    const membersData = await membersDataQ;
 
     // 5. Books needing repair
-    const poorConditionBooks = await BookCopy.countDocuments({ condition: 'poor', ...tenantFilter });
+    const poorQ = BookCopy.countDocuments({ condition: 'poor', ...tenantFilter });
+    if (isCrossTenant) poorQ.crossTenant(CT);
+    const poorConditionBooks = await poorQ;
 
     res.json({
       activeBorrows,

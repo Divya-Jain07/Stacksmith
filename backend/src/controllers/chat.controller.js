@@ -11,18 +11,18 @@ exports.getConversations = catchAsync(async (req, res, next) => {
     let filter = { adminId: req.user.adminId };
 
     if (req.user.role === 'Member') {
-      const member = await Member.findOne({ userId: req.user.id });
+      const member = await Member.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (!member) throw new ApiError(404, 'Member not found');
       filter.memberId = member._id;
     } else {
       // Librarian/Admin: see conversations assigned to them
-      const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+      const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (staff) filter.librarianId = staff._id;
     }
 
     const conversations = await Conversation.find(filter)
-      .populate('memberId', 'name memberCode')
-      .populate('bookId', 'name isbn')
+      .populate({ path: 'memberId', select: 'name memberCode', match: { adminId: req.user.adminId } })
+      .populate({ path: 'bookId', select: 'name isbn', match: { adminId: req.user.adminId } })
       .sort({ lastMessageAt: -1 });
 
     res.json(conversations);
@@ -39,8 +39,8 @@ exports.getUnassignedConversations = catchAsync(async (req, res, next) => {
       adminId: req.user.adminId,
       status: 'Open'
     })
-      .populate('memberId', 'name memberCode')
-      .populate('bookId', 'name isbn')
+      .populate({ path: 'memberId', select: 'name memberCode', match: { adminId: req.user.adminId } })
+      .populate({ path: 'bookId', select: 'name isbn', match: { adminId: req.user.adminId } })
       .sort({ lastMessageAt: -1 });
 
     res.json(conversations);
@@ -53,7 +53,7 @@ exports.createConversation = catchAsync(async (req, res, next) => {
       throw new ApiError(403, 'Only members can start conversations');
     }
 
-    const member = await Member.findOne({ userId: req.user.id });
+    const member = await Member.findOne({ userId: req.user.id, adminId: req.user.adminId });
     if (!member) throw new ApiError(404, 'Member not found');
 
     const conversation = new Conversation({
@@ -77,12 +77,12 @@ exports.getConversationMessages = catchAsync(async (req, res, next) => {
 
     // Permission check
     if (req.user.role === 'Member') {
-      const member = await Member.findOne({ userId: req.user.id });
+      const member = await Member.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (!member || String(conversation.memberId) !== String(member._id)) {
         throw new ApiError(403, 'Access denied');
       }
     } else {
-      const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+      const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (staff && conversation.librarianId && String(conversation.librarianId) !== String(staff._id)) {
         throw new ApiError(403, 'Access denied');
       }
@@ -143,7 +143,7 @@ exports.closeConversation = catchAsync(async (req, res, next) => {
       throw new ApiError(403, 'Forbidden');
     }
 
-    const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+    const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId: req.user.adminId });
     const conversation = await Conversation.findOneAndUpdate(
       { 
         _id: req.params.id, 

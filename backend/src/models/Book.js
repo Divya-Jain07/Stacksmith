@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const BookSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -17,4 +18,8 @@ const BookSchema = new mongoose.Schema({
 BookSchema.index({ adminId: 1, createdAt: -1 });
 BookSchema.index({ adminId: 1, isbn: 1 });
 
-module.exports = mongoose.model('Book', BookSchema);
+BookSchema.plugin(tenantGuardPlugin);
+
+const Book = mongoose.model('Book', BookSchema);
+patchAggregateForModel(Book);
+module.exports = Book;

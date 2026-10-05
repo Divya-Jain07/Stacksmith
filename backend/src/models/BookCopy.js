@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const BookCopySchema = new mongoose.Schema({
   bookId: { type: mongoose.Schema.Types.ObjectId, ref: 'Book', required: true },
@@ -14,4 +15,8 @@ BookCopySchema.index({ bookId: 1, status: 1 });
 // Index for tenant-scoped queries (adminId is used in $match of the aggregation)
 BookCopySchema.index({ adminId: 1, bookId: 1, status: 1 });
 
-module.exports = mongoose.model('BookCopy', BookCopySchema);
+BookCopySchema.plugin(tenantGuardPlugin);
+
+const BookCopy = mongoose.model('BookCopy', BookCopySchema);
+patchAggregateForModel(BookCopy);
+module.exports = BookCopy;

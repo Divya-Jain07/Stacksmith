@@ -11,7 +11,7 @@ exports.collectFine = catchAsync(async (req, res, next) => {
 
     if (!fine) throw new ApiError(404, 'Fine not found');
 
-    const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+    const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId: req.tenantFilter?.adminId || req.user.adminId });
     if (!staff) throw new ApiError(404, 'Staff not found');
 
     fine.status = 'collected';

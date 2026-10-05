@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const FineSchema = new mongoose.Schema({
   borrowingId: { type: mongoose.Schema.Types.ObjectId, ref: 'BorrowingHistory', required: true },
@@ -12,4 +13,8 @@ const FineSchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Fine', FineSchema);
+FineSchema.plugin(tenantGuardPlugin);
+
+const Fine = mongoose.model('Fine', FineSchema);
+patchAggregateForModel(Fine);
+module.exports = Fine;

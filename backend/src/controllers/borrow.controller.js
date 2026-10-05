@@ -308,10 +308,11 @@ exports.cancelCatalogHold = catchAsync(async (req, res, next) => {
 // Get pending borrowing requests
 exports.getPendingRequests = catchAsync(async (req, res, next) => {
   const pendingBorrows = await BorrowingHistory.find({ requestStatus: 'Requested', ...(req.tenantFilter || {}) })
-    .populate('memberId', 'name memberCode')
+    .populate({ path: 'memberId', select: 'name memberCode', match: req.tenantFilter || {} })
     .populate({
       path: 'bookCopyId',
-      populate: { path: 'bookId', select: 'name author' }
+      match: req.tenantFilter || {},
+      populate: { path: 'bookId', select: 'name author', match: req.tenantFilter || {} }
     });
   res.json(pendingBorrows);
 });

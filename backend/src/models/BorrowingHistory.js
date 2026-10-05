@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { tenantGuardPlugin, patchAggregateForModel } = require('../plugins/tenantGuard');
 
 const BorrowingHistorySchema = new mongoose.Schema({
   requestStatus: { type: String, enum: ['Requested', 'Active', 'Returned'], default: 'Requested' },
@@ -11,4 +12,8 @@ const BorrowingHistorySchema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
 }, { timestamps: true });
 
-module.exports = mongoose.model('BorrowingHistory', BorrowingHistorySchema);
+BorrowingHistorySchema.plugin(tenantGuardPlugin);
+
+const BorrowingHistory = mongoose.model('BorrowingHistory', BorrowingHistorySchema);
+patchAggregateForModel(BorrowingHistory);
+module.exports = BorrowingHistory;
