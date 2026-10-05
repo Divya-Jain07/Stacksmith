@@ -60,7 +60,8 @@ const requireSelfOrStaff = (options = {}) => {
     // If Member, verify the ID matches their profile
     if (req.user.role === 'Member') {
       const Member = require('../models/Member');
-      const member = await Member.findOne({ userId: req.user.id });
+      // Scope by adminId from the token so the tenant guard accepts the query
+      const member = await Member.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (!member) return res.status(403).json({ error: 'Member profile not found.' });
 
       // Unless skipIdCheck is set, verify :id matches the member's own profile
