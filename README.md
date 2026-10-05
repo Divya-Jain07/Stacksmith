@@ -130,7 +130,7 @@ Stacksmith/
 
 ```env
 PORT=5000
-MONGO_URI=mongodb+srv://<db_user>:<db_password>@cluster0.nj03qxi.mongodb.net/?appName=Cluster0
+MONGO_URI=mongodb+srv://<db_user>:<db_password>@your-cluster-placeholder.mongodb.net/?appName=Cluster0
 NODE_ENV=development
 JWT_SECRET=your_jwt_secret_here
 JWT_EXPIRES_IN=7d

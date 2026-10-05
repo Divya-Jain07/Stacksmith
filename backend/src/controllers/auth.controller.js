@@ -92,7 +92,12 @@ exports.registerSuperAdmin = async (req, res, next) => {
 exports.createAdmin = async (req, res, next) => {
   try {
     const { name, email, phone, departmentName, staffId } = req.body;
-    const password = req.body.password || 'password123';
+    let password = req.body.password;
+    let tempPassword = null;
+    if (!password) {
+      tempPassword = require('crypto').randomBytes(8).toString('hex');
+      password = tempPassword;
+    }
     if (!name || !email || !phone) {
       return res.status(400).json({ error: 'name, email and phone are required.' });
     }
@@ -112,7 +117,8 @@ exports.createAdmin = async (req, res, next) => {
     res.status(201).json({
       message: 'Branch Admin registered successfully.',
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, adminId: user.adminId }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role, adminId: user.adminId },
+      ...(tempPassword && { temporaryPassword: tempPassword })
     });
   } catch (err) {
     next(err);
@@ -123,7 +129,12 @@ exports.createAdmin = async (req, res, next) => {
 exports.createLibrarian = async (req, res, next) => {
   try {
     const { name, email, phone, departmentName, staffId } = req.body;
-    const password = req.body.password || 'password123';
+    let password = req.body.password;
+    let tempPassword = null;
+    if (!password) {
+      tempPassword = require('crypto').randomBytes(8).toString('hex');
+      password = tempPassword;
+    }
     if (!name || !email || !phone) {
       return res.status(400).json({ error: 'name, email and phone are required.' });
     }
@@ -144,7 +155,8 @@ exports.createLibrarian = async (req, res, next) => {
         message: 'Librarian registered successfully.',
         token,
         user: { id: user._id, name: user.name, email: user.email, role: user.role, adminId: user.adminId },
-        staffProfile
+        staffProfile,
+        ...(tempPassword && { temporaryPassword: tempPassword })
       });
     } catch (innerErr) {
       return res.status(innerErr.statusCode || 400).json({ error: innerErr.message });
@@ -238,6 +250,9 @@ exports.changePassword = async (req, res, next) => {
     const { oldPassword, newPassword } = req.body;
     if (!oldPassword || !newPassword) {
       return res.status(400).json({ error: 'Please provide both old and new passwords.' });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'New password must be at least 8 characters long.' });
     }
 
     const user = await User.findById(req.user.id);

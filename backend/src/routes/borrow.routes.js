@@ -17,11 +17,5 @@ router.get('/pending', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowCont
 router.patch('/:id/confirm-issue', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.confirmIssue);
 router.patch('/:id/confirm-return', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.confirmReturn);
 
-// --- DEBUG ---
-router.get('/debug/:barcode', async (req, res) => {
-  const BookCopy = require('../models/BookCopy');
-  const copy = await BookCopy.findOne({ barcode: req.params.barcode });
-  res.json({ copy });
-});
 
 module.exports = router;

@@ -5,16 +5,8 @@ const BookCopy = require('../models/BookCopy');
 const fs = require('fs');
 const csv = require('csv-parser');
 
-const resolveEffectiveAdminId = (req) => {
-  const queryAdminId = req.query?.adminId;
-  const bodyAdminId = req.body?.adminId;
-  const userAdminId = req.user?.adminId;
-
-  return queryAdminId || bodyAdminId || userAdminId || null;
-};
-
 const buildTenantScopeFilter = (req) => {
-  const adminId = resolveEffectiveAdminId(req);
+  const adminId = req.tenantFilter?.adminId;
   return adminId ? { adminId } : {};
 };
 
@@ -52,7 +44,7 @@ const generateCopiesForBook = async (book, isbn, numberOfCopies, adminId) => {
 // Add Catalog Book Entry (Flow B)
 exports.createBook = catchAsync(async (req, res, next) => {
     const { isbn, numberOfCopies } = req.body;
-    const adminId = resolveEffectiveAdminId(req);
+    const adminId = req.tenantFilter?.adminId;
 
     if (!adminId) {
       throw new ApiError(400, 'Please select a library scope before creating a book.');
@@ -80,15 +72,16 @@ exports.createBook = catchAsync(async (req, res, next) => {
   });
 
 // Bulk Import Books from CSV (Flow A)
-exports.resolveEffectiveAdminId = resolveEffectiveAdminId;
+
 
 exports.bulkImportBooks = catchAsync(async (req, res, next) => {
   if (!req.file) {
     throw new ApiError(400, 'No CSV file provided.');
   }
 
-  const adminId = resolveEffectiveAdminId(req);
+  const adminId = req.tenantFilter?.adminId;
   if (!adminId) {
+    fs.unlink(req.file.path, () => {});
     throw new ApiError(400, 'Please provide an adminId scope for bulk import.');
   }
 
@@ -101,7 +94,11 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
 
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (data) => results.push(data))
+    .on('data', (data) => {
+      if (results.length < 1000) {
+        results.push(data);
+      }
+    })
     .on('end', async () => {
       let rowNum = 1; // 1 represents headers conceptually, data starts at 2
       for (const row of results) {
@@ -160,6 +157,7 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
       res.json({ added, updated, skipped, invalid, totalRows: results.length, errors });
     })
     .on('error', (error) => {
+      fs.unlink(req.file.path, () => {});
       res.status(500).json({ error: 'Failed to process CSV file.' });
     });
 });
@@ -212,8 +210,16 @@ exports.getBookById = catchAsync(async (req, res, next) => {
 // Update Book Metadata
 exports.updateBook = catchAsync(async (req, res, next) => {
   const filter = { _id: req.params.id, ...(req.tenantFilter || {}) };
-  const book = await Book.findOneAndUpdate(filter, req.body, { new: true });
-  if (!book) throw new ApiError(404, 'Book not found.');
+  const allowedFields = ['name', 'author', 'isbn', 'genre', 'language', 'description', 'publisher', 'yearPublished'];
+  const updateData = {};
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  }
+
+  const book = await Book.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
+  if (!book) throw new ApiError(404, 'Book not found in your library scope.');
   res.json(book);
 });
 

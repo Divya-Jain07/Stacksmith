@@ -3,8 +3,19 @@ const router = express.Router();
 const bookController = require('../controllers/book.controller');
 const { authorize } = require('../middlewares/auth.middleware');
 
+const os = require('os');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' }); // Files temporarily saved to uploads/
+const upload = multer({ 
+  dest: os.tmpdir(),
+  limits: { fileSize: 1024 * 1024, files: 1 }, // 1 MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .csv files are allowed'));
+    }
+  }
+});
 
 // POST   /api/books/bulk-import - Bulk import from CSV
 router.post('/bulk-import', authorize('SuperAdmin', 'Admin', 'Librarian'), upload.single('file'), bookController.bulkImportBooks);

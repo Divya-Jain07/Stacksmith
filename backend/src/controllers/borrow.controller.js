@@ -4,74 +4,125 @@ const BorrowingHistory = require('../models/BorrowingHistory');
 const BookCopy = require('../models/BookCopy');
 const Member = require('../models/Member');
 const LibrarianStaff = require('../models/LibrarianStaff');
+const Book = require('../models/Book');
+const Fine = require('../models/Fine');
+const BookReservation = require('../models/BookReservation');
 const { calculateOverdueFine } = require('../utils/fineCalculator');
+const { runInTransaction } = require('../utils/transaction');
+
+// Helper for Return & Confirm Return
+const processReturn = async (borrowingId, adminId) => {
+  return await runInTransaction(async (session) => {
+    // 1. Move borrowing to Returned exactly once
+    const borrowing = await BorrowingHistory.findOneAndUpdate(
+      { _id: borrowingId, requestStatus: 'Active', returnedDate: null, adminId },
+      { $set: { requestStatus: 'Returned', returnedDate: new Date() } },
+      { new: true, session }
+    );
+    
+    if (!borrowing) throw new ApiError(404, 'Active borrowing record not found or already returned');
+
+    // 2. Move copy to available
+    const copy = await BookCopy.findOneAndUpdate(
+      { _id: borrowing.bookCopyId, status: 'borrowed', adminId },
+      { $set: { status: 'available' } },
+      { new: true, session }
+    );
+    
+    if (!copy) throw new ApiError(404, 'Borrowed copy not found');
+
+    // 3. Increment book counter
+    await Book.updateOne(
+      { _id: copy.bookId, adminId },
+      { $inc: { availableCopies: 1 } },
+      { session }
+    );
+
+    // 4. Create fine if overdue
+    const fineAmount = calculateOverdueFine(borrowing.dueDate, borrowing.returnedDate);
+    if (fineAmount > 0) {
+      const fineRecord = new Fine({
+        borrowingId: borrowing._id,
+        borrowedUser: borrowing.memberId,
+        amountToPay: fineAmount,
+        reason: 'overdue',
+        adminId: borrowing.adminId
+      });
+      await fineRecord.save({ session });
+    }
+    
+    return { borrowing, fineAmount };
+  });
+};
 
 // Issue a book copy to a member
 exports.issueBook = catchAsync(async (req, res, next) => {
   const { barcode, memberCode, dueDate } = req.body;
+  const adminId = req.tenantFilter?.adminId;
+  
+  if (!adminId) throw new ApiError(400, 'Tenant scope required');
 
-  // Strictly enforce tenant scope since barcodes might overlap across different libraries using old formats
-  const copyFilter = { barcode, status: { $in: ['available', 'reserved'] }, ...(req.tenantFilter || {}) };
-  const copy = await BookCopy.findOne(copyFilter);
-  if (!copy) {
-    return res.status(400).json({
-      error: 'Book copy not available or not found.',
-      debug: { receivedBarcode: barcode, filterUsed: copyFilter, reqBody: req.body }
-    });
+  const parsedDueDate = new Date(dueDate);
+  if (!dueDate || isNaN(parsedDueDate.getTime()) || parsedDueDate <= new Date()) {
+    throw new ApiError(400, 'Invalid or past due date');
   }
 
-  // Find member (still enforce tenant scope if applicable)
-  const memberFilter = { memberCode, status: 'active', ...(req.tenantFilter || {}) };
-  const member = await Member.findOne(memberFilter);
-  if (!member) throw new ApiError(404, 'Member not found in your library scope');
-
+  // Pre-checks (outside transaction to fail fast)
+  const member = await Member.findOne({ memberCode, status: 'active', adminId });
+  if (!member) throw new ApiError(404, 'Active member not found in your library scope');
+  
   const activeBorrows = await BorrowingHistory.countDocuments({
     memberId: member._id,
-    returnedDate: null,
-    ...(req.tenantFilter || {})
+    requestStatus: { $in: ['Requested', 'Active'] },
+    adminId
   });
-  if (activeBorrows >= member.borrowLimits) {
-    throw new ApiError(400, 'Borrow limit exceeded');
-  }
+  if (activeBorrows >= member.borrowLimits) throw new ApiError(400, 'Borrow limit exceeded');
 
-  // Determine who is issuing the book
   let staffId = null;
   if (req.user.role === 'Librarian') {
-    const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+    const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId });
     if (!staff) throw new ApiError(404, 'Librarian staff profile not found');
     staffId = staff._id;
   }
 
-  // If copy was reserved, clean up any pending request for this copy
-  if (copy.status === 'reserved') {
-    await BorrowingHistory.deleteMany({ bookCopyId: copy._id, requestStatus: 'Requested' });
-  }
+  const borrowing = await runInTransaction(async (session) => {
+    // 1. Claim copy (conditional update)
+    const copy = await BookCopy.findOneAndUpdate(
+      { barcode, status: { $in: ['available', 'reserved'] }, adminId },
+      { $set: { status: 'borrowed' } },
+      { new: false, session } // Returns the old document so we know its previous status
+    );
 
-  const wasPreviouslyReserved = copy.status === 'reserved';
-
-  const borrowing = new BorrowingHistory({
-    bookCopyId: copy._id,
-    memberId: member._id,
-    issuedBy: staffId, // will be null if Admin or SuperAdmin issued it
-    dueDate: new Date(dueDate),
-    borrowedDate: new Date(),
-    requestStatus: 'Active',
-    adminId: member.adminId // Assign to the member's library scope
-  });
-  await borrowing.save();
-
-  copy.status = 'borrowed';
-  await copy.save();
-
-  const Book = require('../models/Book');
-  const book = await Book.findById(copy.bookId);
-  if (book) {
-    // Only decrement if the copy was available (reserved copies already decremented availableCopies)
-    if (!wasPreviouslyReserved) {
-      book.availableCopies = Math.max(0, book.availableCopies - 1);
-      await book.save();
+    if (!copy) {
+      console.error('issueBook failed: copy not found or unavailable.', { barcode, adminId });
+      throw new ApiError(400, 'Book copy not available or not found.');
     }
-  }
+
+    const wasPreviouslyReserved = copy.status === 'reserved';
+
+    if (wasPreviouslyReserved) {
+      await BorrowingHistory.deleteMany({ bookCopyId: copy._id, requestStatus: 'Requested', adminId }, { session });
+    } else {
+      await Book.updateOne(
+        { _id: copy.bookId, adminId },
+        { $inc: { availableCopies: -1 } },
+        { session }
+      );
+    }
+
+    const newBorrowing = new BorrowingHistory({
+      bookCopyId: copy._id,
+      memberId: member._id,
+      issuedBy: staffId,
+      dueDate: parsedDueDate,
+      borrowedDate: new Date(),
+      requestStatus: 'Active',
+      adminId: member.adminId
+    });
+    
+    await newBorrowing.save({ session });
+    return newBorrowing;
+  });
 
   res.status(201).json({ message: 'Book issued successfully.', borrowing });
 });
@@ -79,61 +130,34 @@ exports.issueBook = catchAsync(async (req, res, next) => {
 // Return a book copy
 exports.returnBook = catchAsync(async (req, res, next) => {
   const { barcode } = req.body;
+  const adminId = req.tenantFilter?.adminId;
+  
+  const copy = await BookCopy.findOne({ barcode, status: 'borrowed', adminId });
+  if (!copy) throw new ApiError(404, 'Book copy not found or not borrowed');
 
-  const copyFilter = { barcode, status: 'borrowed', ...(req.tenantFilter || {}) };
-  const copy = await BookCopy.findOne(copyFilter);
-  if (!copy) throw new ApiError(404, 'Book copy not found');
-
-  const borrowFilter = { bookCopyId: copy._id, returnedDate: null, ...(req.tenantFilter || {}) };
-  const borrowing = await BorrowingHistory.findOne(borrowFilter);
+  const borrowing = await BorrowingHistory.findOne({ bookCopyId: copy._id, returnedDate: null, adminId });
   if (!borrowing) throw new ApiError(404, 'Borrowing record not found');
 
-  borrowing.returnedDate = new Date();
-  borrowing.requestStatus = 'Returned';
-  await borrowing.save();
-
-  copy.status = 'available';
-  await copy.save();
-
-  const Book = require('../models/Book');
-  const book = await Book.findById(copy.bookId);
-  if (book) {
-    book.availableCopies += 1;
-    await book.save();
-  }
-
-  const fineAmount = calculateOverdueFine(borrowing.dueDate, borrowing.returnedDate);
-  if (fineAmount > 0) {
-    const Fine = require('../models/Fine');
-    const fineRecord = new Fine({
-      borrowingId: borrowing._id,
-      borrowedUser: borrowing.memberId,
-      amountToPay: fineAmount,
-      reason: 'overdue',
-      adminId: req.body.adminId || req.user.adminId
-    });
-    await fineRecord.save();
-  }
+  const result = await processReturn(borrowing._id, adminId);
 
   res.json({
     message: 'Book returned successfully.',
-    fineGenerated: fineAmount > 0 ? fineAmount : 0
+    fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0
   });
 });
 
 // Create a reservation for a book
 exports.createReservation = catchAsync(async (req, res, next) => {
   const { memberCode, bookId } = req.body;
+  const adminId = req.tenantFilter?.adminId;
 
-  const memberFilter = { memberCode, status: 'active', ...(req.tenantFilter || {}) };
-  const member = await Member.findOne(memberFilter);
+  const member = await Member.findOne({ memberCode, status: 'active', adminId });
   if (!member) throw new ApiError(404, 'Member not found');
 
-  const BookReservation = require('../models/BookReservation');
   const reservation = new BookReservation({
     requestedUserId: member._id,
     bookId,
-    adminId: req.body.adminId || req.user.adminId
+    adminId: member.adminId
   });
 
   await reservation.save();
@@ -142,20 +166,18 @@ exports.createReservation = catchAsync(async (req, res, next) => {
 
 // Renew a borrowed book
 exports.renewBorrowing = catchAsync(async (req, res, next) => {
-  // Check for either newDueDate or dueDate to be forgiving of API request mistakes
   const { barcode, newDueDate, dueDate } = req.body;
   const targetDate = newDueDate || dueDate;
+  const adminId = req.tenantFilter?.adminId;
 
   if (!targetDate) {
     throw new ApiError(400, 'Due date required');
   }
 
-  const copyFilter = { barcode, status: 'borrowed', ...(req.tenantFilter || {}) };
-  const copy = await BookCopy.findOne(copyFilter);
+  const copy = await BookCopy.findOne({ barcode, status: 'borrowed', adminId });
   if (!copy) throw new ApiError(404, 'Borrowed copy not found');
 
-  const borrowFilter = { bookCopyId: copy._id, returnedDate: null, ...(req.tenantFilter || {}) };
-  const borrowing = await BorrowingHistory.findOne(borrowFilter);
+  const borrowing = await BorrowingHistory.findOne({ bookCopyId: copy._id, returnedDate: null, adminId });
   if (!borrowing) throw new ApiError(404, 'Borrowing record not found');
 
   borrowing.dueDate = new Date(targetDate);
@@ -170,50 +192,54 @@ exports.renewBorrowing = catchAsync(async (req, res, next) => {
 exports.memberRequestBook = catchAsync(async (req, res, next) => {
   const { barcode, bookId } = req.body;
   const memberId = req.memberProfileId;
+  const adminId = req.tenantFilter?.adminId;
+  
   if (!memberId) throw new ApiError(401, 'Member not authenticated');
 
-  const member = await Member.findById(memberId);
+  const member = await Member.findOne({ _id: memberId, status: 'active', adminId });
+  if (!member) throw new ApiError(404, 'Active member not found');
 
-  // Check limits
   const activeBorrows = await BorrowingHistory.countDocuments({
     memberId,
-    requestStatus: { $in: ['Requested', 'Active'] }
+    requestStatus: { $in: ['Requested', 'Active'] },
+    adminId
   });
   if (activeBorrows >= member.borrowLimits) {
     throw new ApiError(400, 'Borrow limit exceeded');
   }
 
-  let copy;
-  if (barcode) {
-    // Staff-style request with specific barcode
-    copy = await BookCopy.findOne({ barcode, status: 'available', ...(req.tenantFilter || {}) });
-  } else if (bookId) {
-    // Member self-service: auto-assign the first available copy of this book
-    copy = await BookCopy.findOne({ bookId, status: 'available', ...(req.tenantFilter || {}) });
-  }
+  const borrowing = await runInTransaction(async (session) => {
+    let copyQuery = { status: 'available', adminId };
+    if (barcode) {
+      copyQuery.barcode = barcode;
+    } else if (bookId) {
+      copyQuery.bookId = bookId;
+    }
 
-  if (!copy) throw new ApiError(404, 'No available copy found for this book');
+    const copy = await BookCopy.findOneAndUpdate(
+      copyQuery,
+      { $set: { status: 'reserved' } },
+      { new: true, session }
+    );
 
-  // Mark copy as reserved immediately
-  copy.status = 'reserved';
-  await copy.save();
+    if (!copy) throw new ApiError(404, 'No available copy found for this book');
 
-  // Create BorrowingHistory as Requested
-  const borrowing = new BorrowingHistory({
-    bookCopyId: copy._id,
-    memberId: member._id,
-    requestStatus: 'Requested',
-    adminId: member.adminId
+    await Book.updateOne(
+      { _id: copy.bookId, adminId },
+      { $inc: { availableCopies: -1 } },
+      { session }
+    );
+
+    const newBorrowing = new BorrowingHistory({
+      bookCopyId: copy._id,
+      memberId: member._id,
+      requestStatus: 'Requested',
+      adminId: member.adminId
+    });
+    await newBorrowing.save({ session });
+    
+    return newBorrowing;
   });
-  await borrowing.save();
-
-  // Update Book catalog available copies
-  const Book = require('../models/Book');
-  const book = await Book.findById(copy.bookId);
-  if (book) {
-    book.availableCopies = Math.max(0, book.availableCopies - 1);
-    await book.save();
-  }
 
   res.status(201).json({ message: 'Book requested successfully.', borrowing });
 });
@@ -221,25 +247,30 @@ exports.memberRequestBook = catchAsync(async (req, res, next) => {
 // Member cancels request
 exports.cancelMemberRequest = catchAsync(async (req, res, next) => {
   const memberId = req.memberProfileId;
-  const borrowing = await BorrowingHistory.findOne({ _id: req.params.id, memberId, requestStatus: 'Requested' });
-  if (!borrowing) throw new ApiError(404, 'Borrowing request not found');
+  const adminId = req.tenantFilter?.adminId;
+  
+  await runInTransaction(async (session) => {
+    const borrowing = await BorrowingHistory.findOneAndDelete(
+      { _id: req.params.id, memberId, requestStatus: 'Requested', adminId },
+      { session }
+    );
+    if (!borrowing) throw new ApiError(404, 'Borrowing request not found');
 
-  // Revert copy status
-  const copy = await BookCopy.findById(borrowing.bookCopyId);
-  if (copy) {
-    copy.status = 'available';
-    await copy.save();
+    const copy = await BookCopy.findOneAndUpdate(
+      { _id: borrowing.bookCopyId, status: 'reserved', adminId },
+      { $set: { status: 'available' } },
+      { new: true, session }
+    );
 
-    // Update Book catalog available copies
-    const Book = require('../models/Book');
-    const book = await Book.findById(copy.bookId);
-    if (book) {
-      book.availableCopies += 1;
-      await book.save();
+    if (copy) {
+      await Book.updateOne(
+        { _id: copy.bookId, adminId },
+        { $inc: { availableCopies: 1 } },
+        { session }
+      );
     }
-  }
+  });
 
-  await BorrowingHistory.findByIdAndDelete(borrowing._id);
   res.json({ message: 'Request cancelled successfully.' });
 });
 
@@ -247,11 +278,13 @@ exports.cancelMemberRequest = catchAsync(async (req, res, next) => {
 exports.memberReserveBook = catchAsync(async (req, res, next) => {
   const { bookId } = req.body;
   const memberId = req.memberProfileId;
+  const adminId = req.tenantFilter?.adminId;
+  
   if (!memberId) throw new ApiError(401, 'Member not authenticated');
 
-  const member = await Member.findById(memberId);
+  const member = await Member.findOne({ _id: memberId, adminId });
+  if (!member) throw new ApiError(404, 'Member not found');
 
-  const BookReservation = require('../models/BookReservation');
   const reservation = new BookReservation({
     requestedUserId: member._id,
     bookId,
@@ -264,8 +297,8 @@ exports.memberReserveBook = catchAsync(async (req, res, next) => {
 // Member cancels catalog hold
 exports.cancelCatalogHold = catchAsync(async (req, res, next) => {
   const memberId = req.memberProfileId;
-  const BookReservation = require('../models/BookReservation');
-  const reservation = await BookReservation.findOneAndDelete({ _id: req.params.id, requestedUserId: memberId });
+  const adminId = req.tenantFilter?.adminId;
+  const reservation = await BookReservation.findOneAndDelete({ _id: req.params.id, requestedUserId: memberId, adminId });
   if (!reservation) throw new ApiError(404, 'Reservation not found');
   res.json({ message: 'Reservation cancelled successfully.' });
 });
@@ -286,65 +319,52 @@ exports.getPendingRequests = catchAsync(async (req, res, next) => {
 // Confirm a requested issue
 exports.confirmIssue = catchAsync(async (req, res, next) => {
   const { dueDate } = req.body;
-  const borrowing = await BorrowingHistory.findOne({ _id: req.params.id, requestStatus: 'Requested' });
-  if (!borrowing) throw new ApiError(404, 'Borrowing request not found');
+  const adminId = req.tenantFilter?.adminId;
+  
+  const parsedDueDate = new Date(dueDate);
+  if (!dueDate || isNaN(parsedDueDate.getTime()) || parsedDueDate <= new Date()) {
+    throw new ApiError(400, 'Invalid or past due date');
+  }
 
   let staffId = null;
   if (req.user.role === 'Librarian') {
-    const staff = await LibrarianStaff.findOne({ userId: req.user.id });
+    const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId });
     if (!staff) throw new ApiError(404, 'Librarian staff profile not found');
     staffId = staff._id;
   }
 
-  borrowing.requestStatus = 'Active';
-  borrowing.borrowedDate = new Date();
-  borrowing.dueDate = new Date(dueDate);
-  borrowing.issuedBy = staffId;
-  await borrowing.save();
+  const borrowing = await runInTransaction(async (session) => {
+    const bw = await BorrowingHistory.findOneAndUpdate(
+      { _id: req.params.id, requestStatus: 'Requested', adminId },
+      { 
+        $set: { 
+          requestStatus: 'Active',
+          borrowedDate: new Date(),
+          dueDate: parsedDueDate,
+          issuedBy: staffId
+        }
+      },
+      { new: true, session }
+    );
+    if (!bw) throw new ApiError(404, 'Borrowing request not found');
 
-  const copy = await BookCopy.findById(borrowing.bookCopyId);
-  if (copy) {
-    copy.status = 'borrowed';
-    await copy.save();
-  }
+    const copy = await BookCopy.findOneAndUpdate(
+      { _id: bw.bookCopyId, status: 'reserved', adminId },
+      { $set: { status: 'borrowed' } },
+      { new: true, session }
+    );
+    if (!copy) throw new ApiError(404, 'Reserved copy not found');
+
+    // Note: Counter does not change here because it was already decremented when requested
+    return bw;
+  });
 
   res.json({ message: 'Book issue confirmed.', borrowing });
 });
 
 // Confirm a return (scanned by librarian)
 exports.confirmReturn = catchAsync(async (req, res, next) => {
-  const borrowing = await BorrowingHistory.findOne({ _id: req.params.id, requestStatus: 'Active' });
-  if (!borrowing) throw new ApiError(404, 'Borrowing not found');
-
-  borrowing.requestStatus = 'Returned';
-  borrowing.returnedDate = new Date();
-  await borrowing.save();
-
-  const copy = await BookCopy.findById(borrowing.bookCopyId);
-  if (copy) {
-    copy.status = 'available';
-    await copy.save();
-
-    const Book = require('../models/Book');
-    const book = await Book.findById(copy.bookId);
-    if (book) {
-      book.availableCopies += 1;
-      await book.save();
-    }
-  }
-
-  const fineAmount = calculateOverdueFine(borrowing.dueDate, borrowing.returnedDate);
-  if (fineAmount > 0) {
-    const Fine = require('../models/Fine');
-    const fineRecord = new Fine({
-      borrowingId: borrowing._id,
-      borrowedUser: borrowing.memberId,
-      amountToPay: fineAmount,
-      reason: 'overdue',
-      adminId: borrowing.adminId
-    });
-    await fineRecord.save();
-  }
-
-  res.json({ message: 'Book return confirmed.', fineGenerated: fineAmount > 0 ? fineAmount : 0 });
+  const adminId = req.tenantFilter?.adminId;
+  const result = await processReturn(req.params.id, adminId);
+  res.json({ message: 'Book return confirmed.', fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0 });
 });

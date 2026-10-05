@@ -262,6 +262,8 @@ erDiagram
 
 `BookCopy` carries two compound indexes (`{ bookId, status }` and `{ adminId, bookId, status }`) specifically to cover the catalog aggregation used when listing books with live availability counts.
 
+**Note on Identity Uniqueness:** Member email addresses (in the `User` collection) and `memberCode` values are globally unique by design across all tenants. This ensures there are no conflicts during authentication.
+
 ## 7. Borrowing Lifecycle
 
 A book copy moves through a small state machine tracked jointly by `BookCopy.status` and `BorrowingHistory.requestStatus`:

@@ -117,6 +117,7 @@ module.exports = (io) => {
 
         callback?.({ conversation, message: firstMessage });
       } catch (err) {
+        console.error('Socket error in conversation:new', err);
         callback?.({ error: 'Failed to create conversation.' });
       }
     });
@@ -159,6 +160,7 @@ module.exports = (io) => {
 
         callback?.({ conversation });
       } catch (err) {
+        console.error('Socket error in conversation:assign', err);
         callback?.({ error: 'Failed to assign conversation.' });
       }
     });
@@ -206,6 +208,7 @@ module.exports = (io) => {
 
         callback?.({ message });
       } catch (err) {
+        console.error('Socket error in message:send', err);
         callback?.({ error: 'Failed to send message.' });
       }
     });
@@ -250,6 +253,7 @@ module.exports = (io) => {
 
         callback?.({ joined: true });
       } catch (err) {
+        console.error('Socket error in conversation:join', err);
         callback?.({ error: 'Failed to join conversation.' });
       }
     });
@@ -284,6 +288,7 @@ module.exports = (io) => {
         io.to(`conv:${conversationId}`).emit('conversation:closed', { conversationId });
         callback?.({ conversation });
       } catch (err) {
+        console.error('Socket error in conversation:close', err);
         callback?.({ error: 'Failed to close conversation.' });
       }
     });
