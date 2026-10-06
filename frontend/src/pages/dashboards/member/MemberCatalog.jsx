@@ -14,6 +14,24 @@ export default function MemberCatalog() {
   const [requestLoading, setRequestLoading] = useState(null)
   const [requestModal, setRequestModal] = useState({ open: false, book: null })
   const [detailsModal, setDetailsModal] = useState(null)
+  const [similarBooks, setSimilarBooks] = useState([])
+  const [similarLoading, setSimilarLoading] = useState(false)
+
+  const openDetails = async (book) => {
+    setDetailsModal(book)
+    setSimilarLoading(true)
+    try {
+      const similar = await bookApi.getSimilarBooks(book._id)
+      setSimilarBooks(similar)
+    } catch (err) {
+      setSimilarBooks([])
+    } finally {
+      setSimilarLoading(false)
+    }
+  }
+
+  const [searchResults, setSearchResults] = useState(null)
+
   const fetchBooks = async () => {
     const cachedBooks = bookApi.getCachedBooks()
     if (cachedBooks) {
@@ -37,6 +55,25 @@ export default function MemberCatalog() {
   useEffect(() => {
     fetchBooks()
   }, [])
+
+  useEffect(() => {
+    if (searchField === 'smart' && search.trim()) {
+      const timer = setTimeout(async () => {
+        setLoading(true)
+        try {
+          const data = await bookApi.searchBooks(search.trim())
+          setSearchResults(data)
+        } catch (err) {
+          notify('Smart search failed', 'error')
+        } finally {
+          setLoading(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    } else {
+      setSearchResults(null)
+    }
+  }, [search, searchField])
 
   const handleRequestBook = async (book) => {
     if (book.availableCopies === 0) {
@@ -63,7 +100,7 @@ export default function MemberCatalog() {
     }
   }
 
-  const filteredBooks = books.filter(b => {
+  const filteredBooks = searchField === 'smart' && search.trim() ? (searchResults || []) : books.filter(b => {
     const q = search.toLowerCase();
     if (!q) return true;
     if (searchField === 'book') return (b.name || '').toLowerCase().includes(q) || (b.isbn || '').includes(search);
@@ -77,7 +114,7 @@ export default function MemberCatalog() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: 0, fontFamily: '"Averia Sans Libre", system-ui' }}>Library Catalog</h2>
-        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Showing {filteredBooks.length} of {books.length} books</span>
+        <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Showing {filteredBooks.length} {searchField === 'smart' && search.trim() ? 'results' : `of ${books.length} books`}</span>
       </div>
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
@@ -92,6 +129,7 @@ export default function MemberCatalog() {
               value={searchField} onChange={e => setSearchField(e.target.value)}
               style={{ padding: '0.65rem 1rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', minWidth: '120px' }}
             >
+              <option value="smart">✨ Smart Search</option>
               <option value="book">Title / ISBN</option>
               <option value="author">Author</option>
               <option value="genre">Genre</option>
@@ -101,7 +139,7 @@ export default function MemberCatalog() {
               <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
               <input 
                 value={search} onChange={e => setSearch(e.target.value)}
-                placeholder={`Search by ${searchField === 'book' ? 'Title or ISBN' : searchField}...`} 
+                placeholder={searchField === 'smart' ? 'Search by vibes, plot, or keywords...' : `Search by ${searchField === 'book' ? 'Title or ISBN' : searchField}...`} 
                 style={{ width: '100%', padding: '0.65rem 1rem 0.65rem 2.25rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
