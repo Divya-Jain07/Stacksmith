@@ -181,9 +181,13 @@ exports.listBranchFines = catchAsync(async (req, res) => {
 exports.collectFine = catchAsync(async (req, res) => {
   const adminId = req.tenantFilter?.adminId;
 
-  // Look up staff for collector info
-  const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId });
-  if (!staff) throw new ApiError(404, 'Staff profile not found');
+  // Staff profile is only for Librarians — Admins/SuperAdmins have no LibrarianStaff record
+  let staffId = null;
+  if (req.user.role === 'Librarian') {
+    const staff = await LibrarianStaff.findOne({ userId: req.user.id, adminId });
+    if (!staff) throw new ApiError(404, 'Staff profile not found');
+    staffId = staff._id;
+  }
 
   const fine = await Fine.findOneAndUpdate(
     { _id: req.params.id, status: 'pending', adminId },
@@ -192,7 +196,7 @@ exports.collectFine = catchAsync(async (req, res) => {
         status: 'collected',
         paymentMode: 'Cash',
         collectedAt: new Date(),
-        paymentCollectedBy: staff._id
+        ...(staffId ? { paymentCollectedBy: staffId } : {})
       }
     },
     { new: true }

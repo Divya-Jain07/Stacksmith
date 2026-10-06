@@ -432,9 +432,8 @@ exports.previewReturn = catchAsync(async (req, res, next) => {
   ]);
 
   // Count member's other pending fines
-  const Fine = require('../models/Fine');
   const pendingFines = await Fine.aggregate([
-    { $match: { adminId, borrowedUser: borrowing.memberId, status: 'pending', _id: { $exists: true } } },
+    { $match: { adminId: borrowing.adminId, borrowedUser: borrowing.memberId, status: 'pending', _id: { $exists: true } } },
     { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$amountToPay' } } }
   ]).crossTenant('preview-fines-check');
 
