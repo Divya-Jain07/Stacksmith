@@ -10,8 +10,14 @@ const FineSchema = new mongoose.Schema({
   paymentMode: { type: String, enum: ['Cash', 'UPI', 'Card', 'None'], default: 'None' },
   collectedAt: { type: Date },
   paymentCollectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'LibrarianStaff' },
-  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  waivedAt: { type: Date },
+  waivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  waiverReason: { type: String, minlength: 3, maxlength: 200, trim: true }
 }, { timestamps: true });
+
+FineSchema.index({ adminId: 1, status: 1, createdAt: -1 });
+FineSchema.index({ adminId: 1, borrowedUser: 1 });
 
 FineSchema.plugin(tenantGuardPlugin);
 

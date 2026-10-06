@@ -120,7 +120,7 @@ export default function SuperAdminDashboard() {
     { icon: Building2,  label: 'Libraries Registered', value: loading ? '—' : totalLibraries, color: '#B8860B' },
     { icon: BookOpen,   label: 'Total Books (Agg.)',   value: loading ? '—' : totalBooks, color: '#2F3E4D' },
     { icon: Activity,   label: 'Active Borrowings',    value: loading ? '—' : totalActiveBorrows, color: '#1565C0' },
-    { icon: DollarSign, label: 'Global Revenue',       value: loading ? '—' : `$${globalRevenue.toFixed(2)}`, color: '#2E7D32' },
+    { icon: DollarSign, label: 'Global Revenue',       value: loading ? '—' : `₹${globalRevenue.toFixed(2)}`, color: '#2E7D32' },
   ]
 
   return (

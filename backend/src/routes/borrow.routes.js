@@ -14,6 +14,7 @@ router.post('/renew', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowContr
 
 // --- Librarian Confirmations (Staff Only) ---
 router.get('/pending', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.getPendingRequests);
+router.get('/preview-return/:barcode', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.previewReturn);
 router.patch('/:id/confirm-issue', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.confirmIssue);
 router.patch('/:id/confirm-return', authorize('Admin', 'Librarian', 'SuperAdmin'), borrowController.confirmReturn);
 

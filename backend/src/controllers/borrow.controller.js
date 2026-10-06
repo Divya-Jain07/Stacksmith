@@ -40,6 +40,7 @@ const processReturn = async (borrowingId, adminId) => {
 
     // 4. Create fine if overdue
     const fineAmount = calculateOverdueFine(borrowing.dueDate, borrowing.returnedDate);
+    let fineId = null;
     if (fineAmount > 0) {
       const fineRecord = new Fine({
         borrowingId: borrowing._id,
@@ -49,9 +50,15 @@ const processReturn = async (borrowingId, adminId) => {
         adminId: borrowing.adminId
       });
       await fineRecord.save({ session });
+      fineId = fineRecord._id;
     }
+
+    // 5. Calculate days overdue (same rule as fineCalculator)
+    const daysOverdue = fineAmount > 0 && borrowing.dueDate
+      ? Math.ceil((borrowing.returnedDate - new Date(borrowing.dueDate)) / (1000 * 60 * 60 * 24))
+      : 0;
     
-    return { borrowing, fineAmount };
+    return { borrowing, copy, fineAmount, fineId, daysOverdue };
   });
 };
 
@@ -140,9 +147,23 @@ exports.returnBook = catchAsync(async (req, res, next) => {
 
   const result = await processReturn(borrowing._id, adminId);
 
+  // Enrich response with book and member details
+  const [book, member] = await Promise.all([
+    Book.findOne({ _id: copy.bookId, adminId }).select('name').lean(),
+    Member.findOne({ _id: result.borrowing.memberId, adminId }).select('name memberCode').lean()
+  ]);
+
   res.json({
     message: 'Book returned successfully.',
-    fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0
+    fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0,
+    fineAmount: result.fineAmount,
+    fineId: result.fineId,
+    daysOverdue: result.daysOverdue,
+    bookTitle: book?.name || null,
+    memberName: member?.name || null,
+    memberCode: member?.memberCode || null,
+    dueDate: result.borrowing.dueDate,
+    returnedDate: result.borrowing.returnedDate
   });
 });
 
@@ -367,5 +388,67 @@ exports.confirmIssue = catchAsync(async (req, res, next) => {
 exports.confirmReturn = catchAsync(async (req, res, next) => {
   const adminId = req.tenantFilter?.adminId;
   const result = await processReturn(req.params.id, adminId);
-  res.json({ message: 'Book return confirmed.', fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0 });
+
+  const copy = await BookCopy.findOne({ _id: result.borrowing.bookCopyId, adminId }).lean();
+  const [book, member] = await Promise.all([
+    copy ? Book.findOne({ _id: copy.bookId, adminId }).select('name').lean() : null,
+    Member.findOne({ _id: result.borrowing.memberId, adminId }).select('name memberCode').lean()
+  ]);
+
+  res.json({
+    message: 'Book return confirmed.',
+    fineGenerated: result.fineAmount > 0 ? result.fineAmount : 0,
+    fineAmount: result.fineAmount,
+    fineId: result.fineId,
+    daysOverdue: result.daysOverdue,
+    bookTitle: book?.name || null,
+    memberName: member?.name || null,
+    memberCode: member?.memberCode || null,
+    dueDate: result.borrowing.dueDate,
+    returnedDate: result.borrowing.returnedDate
+  });
+});
+
+// Preview return (read-only) - shows overdue info before confirming
+exports.previewReturn = catchAsync(async (req, res, next) => {
+  const { barcode } = req.params;
+  const adminId = req.tenantFilter?.adminId;
+
+  const copy = await BookCopy.findOne({ barcode, status: 'borrowed', adminId });
+  if (!copy) throw new ApiError(404, 'This copy is not currently borrowed in your branch');
+
+  const borrowing = await BorrowingHistory.findOne({ bookCopyId: copy._id, requestStatus: 'Active', returnedDate: null, adminId });
+  if (!borrowing) throw new ApiError(404, 'Active borrowing not found');
+
+  const now = new Date();
+  const fineAmount = calculateOverdueFine(borrowing.dueDate, now);
+  const daysOverdue = fineAmount > 0 && borrowing.dueDate
+    ? Math.ceil((now - new Date(borrowing.dueDate)) / (1000 * 60 * 60 * 24))
+    : 0;
+
+  const [book, member] = await Promise.all([
+    Book.findOne({ _id: copy.bookId, adminId }).select('name').lean(),
+    Member.findOne({ _id: borrowing.memberId, adminId }).select('name memberCode').lean()
+  ]);
+
+  // Count member's other pending fines
+  const Fine = require('../models/Fine');
+  const pendingFines = await Fine.aggregate([
+    { $match: { adminId, borrowedUser: borrowing.memberId, status: 'pending', _id: { $exists: true } } },
+    { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$amountToPay' } } }
+  ]).crossTenant('preview-fines-check');
+
+  const otherFines = pendingFines[0] || { count: 0, total: 0 };
+
+  res.json({
+    bookTitle: book?.name || null,
+    memberName: member?.name || null,
+    memberCode: member?.memberCode || null,
+    dueDate: borrowing.dueDate,
+    fineAmount,
+    daysOverdue,
+    otherPendingFinesCount: otherFines.count,
+    otherPendingFinesTotal: otherFines.total,
+    estimatedAsOf: now
+  });
 });

@@ -258,7 +258,7 @@ export default function MemberDirectory() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                 <StatBox label={activeOrRequestCount(profileData).label} value={activeOrRequestCount(profileData).value} />
                 <StatBox label="Total Read" value={profileData.stats?.totalBooksRead || 0} />
-                <StatBox label="Outstanding Fines" value={`$${profileData.outstandingFines?.reduce((s, f) => s + (f.amountToPay || 0), 0).toFixed(2) || '0.00'}`} valueColor="#EF5350" />
+                <StatBox label="Outstanding Fines" value={`₹${profileData.outstandingFines?.reduce((s, f) => s + (f.amountToPay || 0), 0).toFixed(2) || '0.00'}`} valueColor="#EF5350" />
                 <StatBox label="Favorite Genre" value={profileData.stats?.mostReadGenre || 'N/A'} small />
               </div>
 

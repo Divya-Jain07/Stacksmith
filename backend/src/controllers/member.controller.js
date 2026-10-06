@@ -103,8 +103,8 @@ exports.getMemberById = async (req, res, next) => {
       .populate({ path: 'bookCopyId', match: req.tenantFilter || {} })
       .sort({ borrowedDate: -1 });
 
-    // Fetch outstanding fines
-    const outstandingFines = await Fine.find({ borrowedUser: member._id, ...(req.tenantFilter || {}) });
+    // Fetch outstanding fines (pending only — bug fix: was previously returning all fines including paid/waived)
+    const outstandingFines = await Fine.find({ borrowedUser: member._id, status: 'pending', ...(req.tenantFilter || {}) });
 
     // Calculate Reading Statistics
     const totalBooksRead = borrowHistory.filter(h => h.returnedDate).length;

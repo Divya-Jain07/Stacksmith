@@ -210,6 +210,7 @@ export const borrowApi = {
   
   // Requests
   getPendingRequests: () => get('/api/borrow/pending'),
+  previewReturn: (barcode) => get(`/api/borrow/preview-return/${encodeURIComponent(barcode)}`),
   confirmIssue: (id, data) => mutateCatalog(() => patch(`/api/borrow/${id}/confirm-issue`, data)),
   confirmReturn: (id) => mutateCatalog(() => patch(`/api/borrow/${id}/confirm-return`))
 }
@@ -224,9 +225,15 @@ export const memberApi = {
 }
 
 export const fineApi = {
+  // Branch-level fines list (staff)
+  getBranchFines: (params = {}) => {
+    const qs = new URLSearchParams()
+    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') qs.append(k, v) })
+    return get(`/api/fines?${qs.toString()}`)
+  },
   getMemberFines: (memberId) => get(`/api/fines/member/${memberId}`),
-  payFine: (id, amount) => post(`/api/fines/${id}/pay`, { amount }),
-  waiveFine: (id) => post(`/api/fines/${id}/waive`)
+  payFine: (id) => post(`/api/fines/${id}/pay`, {}),
+  waiveFine: (id, waiverReason) => post(`/api/fines/${id}/waive`, { waiverReason })
 }
 
 export const chatApi = {
