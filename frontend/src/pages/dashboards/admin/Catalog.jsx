@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Plus, Upload, Book, X, Edit3, Trash2, Layers, Loader2 } from 'lucide-react'
+import { Search, Plus, Upload, Book, X, Edit3, Trash2, Layers, Loader2, Sparkles } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
 import { useDialog } from '../../../context/DialogContext'
 import { bookApi } from '../../../services/api'
@@ -13,6 +13,9 @@ export default function Catalog() {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [searchField, setSearchField] = useState('book')
+  const [smartSearch, setSmartSearch] = useState(false)
+  const [searchResults, setSearchResults] = useState(null)
+  const [smartSearchLoading, setSmartSearchLoading] = useState(false)
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingBookId, setEditingBookId] = useState(null)
@@ -54,6 +57,27 @@ export default function Catalog() {
     const timer = window.setTimeout(() => setImportNotice(null), 6000)
     return () => window.clearTimeout(timer)
   }, [importNotice])
+
+  useEffect(() => {
+    if (!smartSearch || !search.trim()) {
+      setSearchResults(null)
+      return
+    }
+
+    const timer = window.setTimeout(async () => {
+      setSmartSearchLoading(true)
+      try {
+        const data = await bookApi.searchBooks(search.trim())
+        setSearchResults(data)
+      } catch (err) {
+        notify(err.message || 'Smart search failed', 'error')
+      } finally {
+        setSmartSearchLoading(false)
+      }
+    }, 400)
+
+    return () => window.clearTimeout(timer)
+  }, [search, smartSearch])
 
   const handleAddSubmit = async (e) => {
     e.preventDefault()
@@ -113,6 +137,7 @@ export default function Catalog() {
       if (res.updated) messageParts.push(`${res.updated} existing book${res.updated !== 1 ? 's' : ''} updated`)
       if (res.invalid) messageParts.push(`${res.invalid} invalid row${res.invalid !== 1 ? 's' : ''}`)
       if (res.skipped) messageParts.push(`${res.skipped} failed row${res.skipped !== 1 ? 's' : ''}`)
+      if (res.embeddingFailed) messageParts.push(`${res.embeddingFailed} embedding${res.embeddingFailed !== 1 ? 's' : ''} failed`)
       if (!messageParts.length) messageParts.push('No rows processed.')
 
       setImportNotice({
@@ -152,7 +177,7 @@ export default function Catalog() {
     }
   }
 
-  const filteredBooks = books.filter(b => {
+  const filteredBooks = smartSearch && search.trim() ? (searchResults || []) : books.filter(b => {
     const q = search.toLowerCase();
     if (!q) return true;
     if (searchField === 'book') return (b.name || '').toLowerCase().includes(q) || (b.isbn || '').includes(search);
@@ -182,7 +207,7 @@ export default function Catalog() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: 0, fontFamily: '"Manrope", sans-serif' }}>Library Catalog</h2>
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Showing {filteredBooks.length} of {books.length} books</span>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Showing {filteredBooks.length} {smartSearch && search.trim() ? 'results' : `of ${books.length} books`}</span>
         </div>
         
         <div style={{ display: 'flex', gap: '0.75rem' }}>
@@ -198,7 +223,7 @@ export default function Catalog() {
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ position: 'relative', maxWidth: '500px', display: 'flex', gap: '0.5rem' }}>
+          <div style={{ position: 'relative', maxWidth: '500px', width: '100%', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <select 
               value={searchField} onChange={e => setSearchField(e.target.value)}
               style={{ padding: '0.65rem 1rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', minWidth: '120px' }}
@@ -213,8 +238,17 @@ export default function Catalog() {
               <input 
                 value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={`Search by ${searchField === 'book' ? 'Title or ISBN' : searchField}...`} 
-                style={{ width: '100%', padding: '0.65rem 1rem 0.65rem 2.25rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
+                placeholder={smartSearch ? 'Search by meaning, plot, or description...' : `Search by ${searchField === 'book' ? 'Title or ISBN' : searchField}...`}
+                style={{ width: '100%', padding: '0.65rem 8.5rem 0.65rem 2.25rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }}
               />
+              <button
+                type="button"
+                aria-pressed={smartSearch}
+                onClick={() => setSmartSearch(active => !active)}
+                style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', padding: '0.45rem 0.7rem', border: `1px solid ${smartSearch ? 'var(--accent-gold)' : 'var(--border-color)'}`, borderRadius: '999px', background: smartSearch ? 'var(--accent-gold)' : 'var(--bg-surface)', color: smartSearch ? '#fff' : 'var(--text-main)', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap', cursor: 'pointer' }}
+              >
+                <Sparkles size={14} /> Smart Search
+              </button>
             </div>
           </div>
         </div>
@@ -234,6 +268,8 @@ export default function Catalog() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading catalog...</td></tr>
+              ) : smartSearchLoading ? (
+                <tr><td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>Searching catalog...</td></tr>
               ) : filteredBooks.length === 0 ? (
                 <tr><td colSpan={6} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No books found in inventory.</td></tr>
               ) : (

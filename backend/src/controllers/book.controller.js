@@ -42,6 +42,18 @@ const generateCopiesForBook = async (book, isbn, numberOfCopies, adminId) => {
   return createdCopies;
 };
 
+const updateBookEmbedding = async (book) => {
+  if (!embeddingService.isConfigured()) return null;
+
+  try {
+    const updated = await embeddingService.updateBookEmbeddingIfNeeded(book);
+    if (updated) await book.save();
+    return null;
+  } catch (error) {
+    return error;
+  }
+};
+
 // Add Catalog Book Entry (Flow B)
 exports.createBook = catchAsync(async (req, res, next) => {
     const { isbn, numberOfCopies } = req.body;
@@ -69,6 +81,11 @@ exports.createBook = catchAsync(async (req, res, next) => {
       createdCopies = await generateCopiesForBook(book, isbn, parseInt(numberOfCopies, 10), adminId);
     }
 
+    const embeddingError = await updateBookEmbedding(book);
+    if (embeddingError) {
+      console.error(`Failed to generate embedding for book ${book._id}:`, embeddingError.message);
+    }
+
     res.status(201).json({ book, copies: createdCopies });
   });
 
@@ -92,42 +109,48 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
   let updated = 0;
   let skipped = 0;
   let invalid = 0;
+  let embeddingFailed = 0;
 
   fs.createReadStream(req.file.path)
-    .pipe(csv())
+    .pipe(csv({
+      mapHeaders: ({ header }) => header.trim().replace(/^\uFEFF/, '').toLowerCase()
+    }))
     .on('data', (data) => {
-      if (results.length < 1000) {
-        results.push(data);
-      }
+      results.push(data);
     })
     .on('end', async () => {
       let rowNum = 1; // 1 represents headers conceptually, data starts at 2
       for (const row of results) {
         rowNum++;
-        const { Title, Author, ISBN, Genre, Language, Publisher, YearPublished, Copies, Description } = row;
+        const { title, author, isbn, genre, language, publisher, yearpublished, copies, description } = row;
         
-        if (!Title || !Author || !ISBN || !Genre || !Language || !Publisher || !YearPublished || !Copies || !Description) {
-          errors.push({ row: rowNum, isbn: ISBN, reason: 'Missing required columns.' });
+        if (!title || !author || !isbn || !genre || !language || !publisher || !yearpublished || !copies || !description?.trim()) {
+          errors.push({ row: rowNum, isbn, reason: 'Missing required columns.' });
           skipped++;
           invalid++;
           continue;
         }
 
-        const numCopies = parseInt(Copies, 10);
+        const numCopies = parseInt(copies, 10);
         if (isNaN(numCopies) || numCopies <= 0) {
-          errors.push({ row: rowNum, isbn: ISBN, reason: 'Invalid Copies number.' });
+          errors.push({ row: rowNum, isbn, reason: 'Invalid Copies number.' });
           skipped++;
           invalid++;
           continue;
         }
 
-        const existingBook = await Book.findOne({ isbn: ISBN, adminId });
+        const existingBook = await Book.findOne({ isbn, adminId });
         if (existingBook) {
           try {
-            await generateCopiesForBook(existingBook, ISBN, numCopies, adminId);
+            await generateCopiesForBook(existingBook, isbn, numCopies, adminId);
+            const embeddingError = await updateBookEmbedding(existingBook);
+            if (embeddingError) {
+              embeddingFailed++;
+              errors.push({ row: rowNum, isbn, reason: `Copies added, but embedding generation failed: ${embeddingError.message}` });
+            }
             updated++;
           } catch (error) {
-            errors.push({ row: rowNum, isbn: ISBN, reason: `Failed to add copies to existing book: ${error.message}` });
+            errors.push({ row: rowNum, isbn, reason: `Failed to add copies to existing book: ${error.message}` });
             skipped++;
           }
           continue;
@@ -135,28 +158,33 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
 
         try {
           const book = new Book({
-            name: Title,
-            author: Author,
-            isbn: ISBN,
-            genre: Genre,
-            language: Language,
-            publisher: Publisher,
-            yearPublished: parseInt(YearPublished, 10),
-            description: Description,
+            name: title.trim(),
+            author: author.trim(),
+            isbn: isbn.trim(),
+            genre: genre.trim(),
+            language: language.trim(),
+            publisher: publisher.trim(),
+            yearPublished: parseInt(yearpublished, 10),
+            description: description.trim(),
             adminId
           });
           await book.save();
 
-          await generateCopiesForBook(book, ISBN, numCopies, adminId);
+          await generateCopiesForBook(book, isbn, numCopies, adminId);
+          const embeddingError = await updateBookEmbedding(book);
+          if (embeddingError) {
+            embeddingFailed++;
+            errors.push({ row: rowNum, isbn, reason: `Book imported, but embedding generation failed: ${embeddingError.message}` });
+          }
           added++;
         } catch (error) {
-          errors.push({ row: rowNum, isbn: ISBN, reason: error.message });
+          errors.push({ row: rowNum, isbn, reason: error.message });
           skipped++;
         }
       }
 
       fs.unlink(req.file.path, () => {}); // Cleanup temp file
-      res.json({ added, updated, skipped, invalid, totalRows: results.length, errors });
+      res.json({ added, updated, skipped, invalid, embeddingFailed, totalRows: results.length, errors });
     })
     .on('error', (error) => {
       fs.unlink(req.file.path, () => {});
@@ -222,6 +250,10 @@ exports.updateBook = catchAsync(async (req, res, next) => {
 
   const book = await Book.findOneAndUpdate(filter, updateData, { new: true, runValidators: true });
   if (!book) throw new ApiError(404, 'Book not found in your library scope.');
+  const embeddingError = await updateBookEmbedding(book);
+  if (embeddingError) {
+    console.error(`Failed to regenerate embedding for book ${book._id}:`, embeddingError.message);
+  }
   res.json(book);
 });
 
