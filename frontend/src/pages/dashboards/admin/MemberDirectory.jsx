@@ -15,6 +15,7 @@ export default function MemberDirectory() {
   const [addForm, setAddForm] = useState({ name: '', emailId: '', phone: '', memberCode: '', membershipType: 'Student', borrowLimits: 5 })
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState(null)
+  const [registrationSuccess, setRegistrationSuccess] = useState(null)
 
   // Profile view modal state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
@@ -46,8 +47,17 @@ export default function MemberDirectory() {
     setAddLoading(true)
     setAddError(null)
     try {
-      await memberApi.createMember(addForm)
-      setIsAddModalOpen(false)
+      const response = await memberApi.createMember(addForm)
+      if (response.temporaryPassword) {
+        setRegistrationSuccess({
+          name: addForm.name,
+          memberCode: response.member.memberCode,
+          password: response.temporaryPassword
+        })
+      } else {
+        setIsAddModalOpen(false)
+        notify('Member registered successfully', 'success')
+      }
       setAddForm({ name: '', emailId: '', phone: '', memberCode: '', membershipType: 'Student', borrowLimits: 5 })
       fetchMembers()
     } catch (err) {
@@ -117,7 +127,7 @@ export default function MemberDirectory() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: 0, fontFamily: '"Manrope", sans-serif' }}>Member Directory</h2>
         <button
-          onClick={() => { setAddForm({ name: '', emailId: '', phone: '', memberCode: '', membershipType: 'Student', borrowLimits: 5 }); setAddError(null); setIsAddModalOpen(true) }}
+          onClick={() => { setAddForm({ name: '', emailId: '', phone: '', memberCode: '', membershipType: 'Student', borrowLimits: 5 }); setAddError(null); setRegistrationSuccess(null); setIsAddModalOpen(true) }}
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--accent-gold)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}
         >
           <Plus size={16} /> Register Member
@@ -204,28 +214,67 @@ export default function MemberDirectory() {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={overlayStyle}>
             <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={modalStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>Register Member</h3>
-                <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20} /></button>
+                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>
+                  {registrationSuccess ? 'Registration Successful' : 'Register Member'}
+                </h3>
+                <button onClick={() => { setIsAddModalOpen(false); setRegistrationSuccess(null); }} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20} /></button>
               </div>
-              {addError && <div style={errorStyle}>{addError}</div>}
-              <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <input placeholder="Name" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} required style={inputStyle} />
-                <input placeholder="Email" type="email" value={addForm.emailId} onChange={e => setAddForm(p => ({ ...p, emailId: e.target.value }))} required style={inputStyle} />
-                <input placeholder="Phone" value={addForm.phone} onChange={e => setAddForm(p => ({ ...p, phone: e.target.value }))} required style={inputStyle} />
-                <input placeholder="Member Code (auto-generated if blank)" value={addForm.memberCode} onChange={e => setAddForm(p => ({ ...p, memberCode: e.target.value }))} style={inputStyle} />
-                <input placeholder="Borrow Limit" type="number" min="1" value={addForm.borrowLimits} onChange={e => setAddForm(p => ({ ...p, borrowLimits: parseInt(e.target.value, 10) }))} required style={inputStyle} />
-                <select value={addForm.membershipType} onChange={e => setAddForm(p => ({ ...p, membershipType: e.target.value }))} style={inputStyle}>
-                  <option value="Student">Student</option>
-                  <option value="Faculty">Faculty</option>
-                  <option value="Public">Public</option>
-                </select>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginBottom: 0 }}>
-                  A default password of <strong>password123</strong> will be assigned.
-                </p>
-                <button type="submit" disabled={addLoading} style={{ background: 'var(--accent-gold)', color: '#fff', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: addLoading ? 'not-allowed' : 'pointer', marginTop: '0.5rem' }}>
-                  {addLoading ? 'Registering...' : 'Register Member'}
-                </button>
-              </form>
+
+              {registrationSuccess ? (
+                <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                  <div style={{ width: 56, height: 56, background: 'rgba(102,187,106,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', color: '#66BB6A' }}>
+                    <CheckCircle size={32} />
+                  </div>
+                  <p style={{ color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{registrationSuccess.name}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>has been registered as a member.</p>
+                  
+                  <div style={{ background: 'var(--bg-hover)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Member Code</span>
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--accent-gold)' }}>{registrationSuccess.memberCode}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>One-time Password</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--text-main)', fontSize: '1.1rem' }}>{registrationSuccess.password}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: '1.4', marginBottom: '1.5rem' }}>
+                    Please provide these credentials to the member. They will be required to change their password upon first login.
+                  </p>
+                  
+                  <button 
+                    onClick={() => { setIsAddModalOpen(false); setRegistrationSuccess(null); }}
+                    style={{ width: '100%', background: 'var(--accent-gold)', color: '#fff', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {addError && <div style={errorStyle}>{addError}</div>}
+                  <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <input placeholder="Name" value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} required style={inputStyle} />
+                    <input placeholder="Email" type="email" value={addForm.emailId} onChange={e => setAddForm(p => ({ ...p, emailId: e.target.value }))} required style={inputStyle} />
+                    <input placeholder="Phone" value={addForm.phone} onChange={e => setAddForm(p => ({ ...p, phone: e.target.value }))} required style={inputStyle} />
+                    <input placeholder="Member Code (auto-generated if blank)" value={addForm.memberCode} onChange={e => setAddForm(p => ({ ...p, memberCode: e.target.value }))} style={inputStyle} />
+                    <input placeholder="Borrow Limit" type="number" min="1" value={addForm.borrowLimits} onChange={e => setAddForm(p => ({ ...p, borrowLimits: parseInt(e.target.value, 10) }))} required style={inputStyle} />
+                    <select value={addForm.membershipType} onChange={e => setAddForm(p => ({ ...p, membershipType: e.target.value }))} style={inputStyle}>
+                      <option value="Student">Student</option>
+                      <option value="Faculty">Faculty</option>
+                      <option value="Public">Public</option>
+                    </select>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginBottom: 0 }}>
+                      A secure, random one-time password will be generated for the account.
+                    </p>
+                    <button type="submit" disabled={addLoading} style={{ background: 'var(--accent-gold)', color: '#fff', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: addLoading ? 'not-allowed' : 'pointer', marginTop: '0.5rem' }}>
+                      {addLoading ? 'Registering...' : 'Register Member'}
+                    </button>
+                  </form>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

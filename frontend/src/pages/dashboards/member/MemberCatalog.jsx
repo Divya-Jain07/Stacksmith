@@ -129,7 +129,7 @@ export default function MemberCatalog() {
               value={searchField} onChange={e => setSearchField(e.target.value)}
               style={{ padding: '0.65rem 1rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', minWidth: '120px' }}
             >
-              <option value="smart">✨ Smart Search</option>
+              <option value="smart">Smart Search</option>
               <option value="book">Title / ISBN</option>
               <option value="author">Author</option>
               <option value="genre">Genre</option>

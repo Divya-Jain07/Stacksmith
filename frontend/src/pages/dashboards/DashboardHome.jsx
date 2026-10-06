@@ -69,7 +69,7 @@ export default function DashboardHome() {
             fontFamily: '"Manrope", sans-serif', fontSize: 'clamp(1.5rem, 3vw, 2rem)', fontWeight: 800,
             color: 'var(--text-main)', letterSpacing: '-0.025em', margin: '0.3rem 0 0.5rem',
           }}>
-            Good {greeting()}, {user?.name?.split(' ')[0]} 👋
+            Good {greeting()}, {user?.name?.split(' ')[0]} !
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
             Your library operations hub — counter, catalog, members and more.

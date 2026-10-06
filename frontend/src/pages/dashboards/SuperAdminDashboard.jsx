@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Building2, BookOpen, Activity, DollarSign, LogOut, Plus, X, Edit3, Trash2, AlertTriangle } from 'lucide-react'
+import { Building2, BookOpen, Activity, DollarSign, LogOut, Plus, X, Edit3, Trash2, AlertTriangle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useDialog } from '../../context/DialogContext'
 import { adminApi, authApi } from '../../services/api'
@@ -25,6 +25,7 @@ export default function SuperAdminDashboard() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', password: '', departmentName: '', staffId: '' })
   const [modalLoading, setModalLoading] = useState(false)
   const [modalError, setModalError] = useState(null)
+  const [registrationSuccess, setRegistrationSuccess] = useState(null)
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [editAdminId, setEditAdminId] = useState(null)
@@ -58,8 +59,17 @@ export default function SuperAdminDashboard() {
     setModalLoading(true)
     setModalError(null)
     try {
-      await authApi.createAdmin(formData)
-      setIsModalOpen(false)
+      const response = await authApi.createAdmin(formData)
+      if (response.temporaryPassword) {
+        setRegistrationSuccess({
+          name: formData.name,
+          email: formData.email,
+          password: response.temporaryPassword
+        })
+      } else {
+        setIsModalOpen(false)
+        notify('Branch Admin registered successfully', 'success')
+      }
       setFormData({ name: '', email: '', phone: '', password: '', departmentName: '', staffId: '' })
       await fetchStats() // Refresh data
     } catch (err) {
@@ -258,7 +268,7 @@ export default function SuperAdminDashboard() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <h2 style={{ color: 'var(--text-main)', fontFamily: '"Manrope", sans-serif', fontSize: '1.4rem' }}>Registered Branches</h2>
             <button
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => { setRegistrationSuccess(null); setIsModalOpen(true); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '0.5rem',
                 background: 'linear-gradient(135deg, #B8860B, #D4A017)',
@@ -344,30 +354,72 @@ export default function SuperAdminDashboard() {
               style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>Register New Branch</h3>
-                <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20}/></button>
+                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>
+                  {registrationSuccess ? 'Registration Successful' : 'Register New Branch'}
+                </h3>
+                <button onClick={() => { setIsModalOpen(false); setRegistrationSuccess(null); }} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20}/></button>
               </div>
 
-              {modalError && <div style={{ color: '#EF9A9A', background: 'rgba(198,40,40,0.12)', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>{modalError}</div>}
+              {registrationSuccess ? (
+                <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                  <div style={{ width: 56, height: 56, background: 'rgba(102,187,106,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', color: '#66BB6A' }}>
+                    <CheckCircle size={32} />
+                  </div>
+                  <p style={{ color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{registrationSuccess.name}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Branch admin account created.</p>
+                  
+                  <div style={{ background: 'var(--bg-hover)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Email Address</span>
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--accent-gold)' }}>{registrationSuccess.email}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>One-time Password</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--text-main)', fontSize: '1.1rem' }}>{registrationSuccess.password}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: '1.4', marginBottom: '1.5rem' }}>
+                    Please share these credentials securely with the branch administrator. They must change their password upon first login.
+                  </p>
+                  
+                  <button 
+                    onClick={() => { setIsModalOpen(false); setRegistrationSuccess(null); }}
+                    style={{ width: '100%', background: 'var(--accent-gold)', color: '#fff', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {modalError && <div style={{ color: '#EF9A9A', background: 'rgba(198,40,40,0.12)', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>{modalError}</div>}
 
-              <form onSubmit={handleRegisterBranch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Input label="Admin Name" name="name" value={formData.name} onChange={handleModalChange} required />
-                <Input label="Email" name="email" type="email" value={formData.email} onChange={handleModalChange} required />
-                <Input label="Phone" name="phone" value={formData.phone} onChange={handleModalChange} required />
-                <Input label="Department (Optional)" name="departmentName" value={formData.departmentName} onChange={handleModalChange} />
-                <Input label="Staff ID (Optional)" name="staffId" value={formData.staffId} onChange={handleModalChange} />
+                  <form onSubmit={handleRegisterBranch} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <Input label="Admin Name" name="name" value={formData.name} onChange={handleModalChange} required />
+                    <Input label="Email" name="email" type="email" value={formData.email} onChange={handleModalChange} required />
+                    <Input label="Phone" name="phone" value={formData.phone} onChange={handleModalChange} required />
+                    <Input label="Department (Optional)" name="departmentName" value={formData.departmentName} onChange={handleModalChange} />
+                    <Input label="Staff ID (Optional)" name="staffId" value={formData.staffId} onChange={handleModalChange} />
 
-                <button
-                  type="submit" disabled={modalLoading}
-                  style={{
-                    background: modalLoading ? 'rgba(184,134,11,0.5)' : 'linear-gradient(135deg, #B8860B, #D4A017)',
-                    color: '#fff', border: 'none', padding: '0.85rem', borderRadius: '8px', cursor: modalLoading ? 'not-allowed' : 'pointer',
-                    fontWeight: 600, fontSize: '0.95rem', marginTop: '1rem'
-                  }}
-                >
-                  {modalLoading ? 'Registering...' : 'Create Branch Admin'}
-                </button>
-              </form>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginBottom: 0 }}>
+                      A secure, random one-time password will be generated for this account.
+                    </p>
+
+                    <button
+                      type="submit" disabled={modalLoading}
+                      style={{
+                        background: modalLoading ? 'rgba(184,134,11,0.5)' : 'linear-gradient(135deg, #B8860B, #D4A017)',
+                        color: '#fff', border: 'none', padding: '0.85rem', borderRadius: '8px', cursor: modalLoading ? 'not-allowed' : 'pointer',
+                        fontWeight: 600, fontSize: '0.95rem', marginTop: '1rem'
+                      }}
+                    >
+                      {modalLoading ? 'Registering...' : 'Create Branch Admin'}
+                    </button>
+                  </form>
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

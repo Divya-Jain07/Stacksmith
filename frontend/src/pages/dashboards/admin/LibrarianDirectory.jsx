@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Trash2, Plus, X, Search, ShieldAlert } from 'lucide-react'
+import { Users, Trash2, Plus, X, Search, ShieldAlert, CheckCircle } from 'lucide-react'
 import { adminApi, authApi } from '../../../services/api'
 import { useDialog } from '../../../context/DialogContext'
 
@@ -15,6 +15,7 @@ export default function LibrarianDirectory() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', departmentName: '', staffId: '' })
   const [modalLoading, setModalLoading] = useState(false)
   const [modalError, setModalError] = useState(null)
+  const [registrationSuccess, setRegistrationSuccess] = useState(null)
 
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -38,8 +39,17 @@ export default function LibrarianDirectory() {
     setModalLoading(true)
     setModalError(null)
     try {
-      await authApi.createLibrarian(formData)
-      setIsAddModalOpen(false)
+      const response = await authApi.createLibrarian(formData)
+      if (response.temporaryPassword) {
+        setRegistrationSuccess({
+          name: formData.name,
+          email: formData.email,
+          password: response.temporaryPassword
+        })
+      } else {
+        setIsAddModalOpen(false)
+        notify('Librarian registered successfully', 'success')
+      }
       setFormData({ name: '', email: '', phone: '', departmentName: '', staffId: '' })
       fetchLibrarians()
     } catch (err) {
@@ -85,7 +95,7 @@ export default function LibrarianDirectory() {
           </p>
         </div>
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => { setRegistrationSuccess(null); setIsAddModalOpen(true); }}
           style={{
             display: 'flex', alignItems: 'center', gap: '0.5rem',
             background: 'linear-gradient(135deg, #B8860B, #D4A017)',
@@ -192,38 +202,76 @@ export default function LibrarianDirectory() {
               style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '450px', maxHeight: '90vh', overflowY: 'auto' }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0, fontFamily: '"Manrope", sans-serif' }}>Add New Librarian</h3>
-                <button onClick={() => { setIsAddModalOpen(false); setModalError(null) }} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20} /></button>
+                <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0, fontFamily: '"Manrope", sans-serif' }}>
+                  {registrationSuccess ? 'Librarian Created' : 'Add New Librarian'}
+                </h3>
+                <button onClick={() => { setIsAddModalOpen(false); setModalError(null); setRegistrationSuccess(null); }} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20} /></button>
               </div>
 
-              {modalError && (
-                <div style={{ color: '#EF9A9A', background: 'rgba(198,40,40,0.12)', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
-                  {modalError}
+              {registrationSuccess ? (
+                <div style={{ textAlign: 'center', padding: '0.5rem 0' }}>
+                  <div style={{ width: 56, height: 56, background: 'rgba(102,187,106,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', color: '#66BB6A' }}>
+                    <CheckCircle size={32} />
+                  </div>
+                  <p style={{ color: 'var(--text-main)', fontSize: '1rem', fontWeight: 600, marginBottom: '0.5rem' }}>{registrationSuccess.name}</p>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>Account created successfully.</p>
+                  
+                  <div style={{ background: 'var(--bg-hover)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                    <div style={{ marginBottom: '1rem' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>Email Address</span>
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--accent-gold)' }}>{registrationSuccess.email}</span>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.25rem' }}>One-time Password</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: 'var(--text-main)', fontSize: '1.1rem' }}>{registrationSuccess.password}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', lineHeight: '1.4', marginBottom: '1.5rem' }}>
+                    Provide these credentials to the staff member. They will be prompted to set a permanent password upon first login.
+                  </p>
+                  
+                  <button 
+                    onClick={() => { setIsAddModalOpen(false); setRegistrationSuccess(null); }}
+                    style={{ width: '100%', background: 'var(--accent-gold)', color: '#fff', padding: '0.85rem', borderRadius: '8px', border: 'none', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    Done
+                  </button>
                 </div>
+              ) : (
+                <>
+                  {modalError && (
+                    <div style={{ color: '#EF9A9A', background: 'rgba(198,40,40,0.12)', padding: '0.75rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem' }}>
+                      {modalError}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <FieldInput label="Full Name" name="name" value={formData.name} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
+                    <FieldInput label="Email" name="email" type="email" value={formData.email} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
+                    <FieldInput label="Phone" name="phone" value={formData.phone} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
+                    <FieldInput label="Department (Optional)" name="departmentName" value={formData.departmentName} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} />
+                    <FieldInput label="Staff ID (Optional)" name="staffId" value={formData.staffId} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} />
+
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginBottom: 0 }}>
+                      A secure, random one-time password will be generated for the account.
+                    </p>
+
+                    <button
+                      type="submit" disabled={modalLoading}
+                      style={{
+                        background: modalLoading ? 'rgba(184,134,11,0.5)' : 'linear-gradient(135deg, #B8860B, #D4A017)',
+                        color: '#fff', border: 'none', padding: '0.85rem', borderRadius: '8px',
+                        cursor: modalLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '0.95rem', marginTop: '0.5rem'
+                      }}
+                    >
+                      {modalLoading ? 'Creating...' : 'Create Librarian'}
+                    </button>
+                  </form>
+                </>
               )}
-
-              <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <FieldInput label="Full Name" name="name" value={formData.name} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
-                <FieldInput label="Email" name="email" type="email" value={formData.email} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
-                <FieldInput label="Phone" name="phone" value={formData.phone} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} required />
-                <FieldInput label="Department (Optional)" name="departmentName" value={formData.departmentName} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} />
-                <FieldInput label="Staff ID (Optional)" name="staffId" value={formData.staffId} onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))} />
-
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', marginTop: '0.25rem', marginBottom: 0 }}>
-                  A default password of <strong>password123</strong> will be assigned. The staff member can change it after logging in.
-                </p>
-
-                <button
-                  type="submit" disabled={modalLoading}
-                  style={{
-                    background: modalLoading ? 'rgba(184,134,11,0.5)' : 'linear-gradient(135deg, #B8860B, #D4A017)',
-                    color: '#fff', border: 'none', padding: '0.85rem', borderRadius: '8px',
-                    cursor: modalLoading ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '0.95rem', marginTop: '0.5rem'
-                  }}
-                >
-                  {modalLoading ? 'Creating...' : 'Create Librarian'}
-                </button>
-              </form>
             </motion.div>
           </motion.div>
         )}
