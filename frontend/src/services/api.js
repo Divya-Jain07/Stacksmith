@@ -193,7 +193,9 @@ export const bookApi = {
       }
       return data
     }))
-  }
+  },
+  searchBooks: (query) => getBooksWithCache(`/search?q=${encodeURIComponent(query)}`),
+  getSimilarBooks: (id) => getBooksWithCache(`/${id}/similar`)
 }
 
 export const borrowApi = {

@@ -26,6 +26,9 @@ router.route('/')
   .post(authorize('SuperAdmin', 'Admin', 'Librarian'), bookController.createBook)
   .get(bookController.getBooks);
 
+// GET    /api/books/search   - Hybrid semantic search
+router.get('/search', bookController.searchBooks);
+
 // GET    /api/books/:id      - Get single book metadata
 // PUT    /api/books/:id      - Update book metadata
 // DELETE /api/books/:id      - Delete book
@@ -33,6 +36,9 @@ router.route('/:id')
   .get(bookController.getBookById)
   .put(authorize('SuperAdmin', 'Admin', 'Librarian'), bookController.updateBook)
   .delete(authorize('SuperAdmin', 'Admin', 'Librarian'), bookController.deleteBook);
+
+// GET    /api/books/:id/similar - Get similar books
+router.get('/:id/similar', bookController.getSimilarBooks);
 
 // POST   /api/books/:id/copies - Add a physical copy
 // GET    /api/books/:id/copies - List all copies of a book
