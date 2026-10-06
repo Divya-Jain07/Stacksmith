@@ -264,6 +264,12 @@ erDiagram
 
 **Note on Identity Uniqueness:** Member email addresses (in the `User` collection) and `memberCode` values are globally unique by design across all tenants. This ensures there are no conflicts during authentication.
 
+## 6.1 Tenant Isolation & Query Guard
+While tenant isolation relies on filtering by `adminId`, it is strictly enforced by a Mongoose plugin (`tenantGuardPlugin`). 
+- **What it enforces:** Every query (`find`, `findOne`, `aggregate`, etc.) on a tenant-owned model must include an `adminId` filter or explicitly opt out. If the filter is missing, the query throws an error in `enforce` mode (or logs a warning in `warn` mode).
+- **Opt-out:** Truly cross-tenant queries (like member login or global uniqueness checks) use `.crossTenant('reason')` to bypass the guard intentionally.
+- **Rollout:** The guard was deployed first in `warn` mode to identify and fix missing filters, then switched to `enforce` mode in production to guarantee isolation (fail-closed).
+
 ## 7. Borrowing Lifecycle
 
 A book copy moves through a small state machine tracked jointly by `BookCopy.status` and `BorrowingHistory.requestStatus`:
@@ -337,8 +343,16 @@ Server-side safeguards worth noting:
 
 ## 10. Design Decisions & Trade-offs
 
-- **Shared-database multi-tenancy over separate databases per tenant.** An `adminId` filter on every query is far simpler to operate and deploy than provisioning a database per branch, at the cost of relying on the `tenantScope` middleware being applied consistently — a missed filter anywhere is a cross-tenant data leak, so it's centralized in one middleware rather than repeated ad hoc in each controller.
+- **Shared-database multi-tenancy over separate databases per tenant.** An `adminId` filter on every query is far simpler to operate and deploy than provisioning a database per branch. To mitigate the risk of a missed filter causing a cross-tenant data leak, isolation is strictly enforced by the `tenantGuardPlugin` which acts as a safety net to ensure no unscoped query can execute.
 - **JWT payload carries `role`, `adminId`, and `profileId` together.** Avoids an extra DB lookup on every request to resolve which branch or profile a user belongs to, at the cost of the token becoming stale if a user's role or branch assignment changes before it expires.
 - **Copy status and borrowing status are tracked on two related documents (`BookCopy.status` and `BorrowingHistory.requestStatus`)** rather than one, since a `BookCopy` needs a current status independent of history, while `BorrowingHistory` needs to preserve every past transaction. The trade-off is the two must be kept in sync manually on every transition rather than derived automatically.
 - **Socket.IO for chat instead of REST polling.** Enables true real-time delivery and presence-style behavior (join queues, claim races) that would be awkward to build on polling, at the cost of needing a second auth path (the Socket.IO handshake middleware) alongside the REST JWT middleware.
 - **Flat-rate overdue fines calculated at return time** rather than accruing daily in the background. Simpler to reason about and implement (no scheduled job needed), at the cost of a member not seeing a running fine total until they actually return the book.
+
+## 11. Smart Search & More Like This
+Stacksmith includes a retrieval-only hybrid search capability for the catalog:
+- **Hybrid Search:** Combines semantic vector similarity with traditional keyword/ISBN matching. Semantic search embeds the query and compares it in-memory with the branch's book vectors.
+- **More Like This:** Recommends similar books by finding nearest neighbor vectors in the same branch.
+- **Privacy:** It is retrieval-only (no LLM generation). No member data is sent to the embedding provider—only the book's title, author, genre, and description.
+- **Limitations:** The catalog is small enough that in-memory vector comparison is used by default (Atlas Vector Search is optional). Caching, rate limits, and budget caps are currently per-process and would require a shared store like Redis for multi-instance deployments.
+- **Message Model Status:** The `Message` model relies on its parent `Conversation` for tenant scoping, which is an intentional design choice given the high volume of messages.

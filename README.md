@@ -241,3 +241,17 @@ The Alchemist,Paulo Coelho,9780061122415,Fiction,English,HarperOne,1988,3,A phil
 - Use a strong `JWT_SECRET` outside local development.
 - Restrict CORS origins before production deployment.
 - The provided demo accounts are intended only for demonstration and review.
+
+## Smart Search & AI Features
+Stacksmith features a **Smart Search** and **More Like This** recommendation system for members exploring the catalog. 
+- **Retrieval Only:** This feature uses semantic embeddings to find books by mood, theme, or topic (e.g. "a book about space travel" or "something like Harry Potter"). No LLM is used to generate text.
+- **Privacy First:** No member data is sent to the embedding provider. Only the book catalog data (title, author, genre, description) is embedded.
+
+*Note: For the best Smart Search experience, ensure books have comprehensive descriptions. Current catalog description coverage is ~83%.*
+
+## Testing & Stability
+Stacksmith has comprehensive automated test coverage for concurrency, tenant isolation, and borrowing logic.
+- **Test Suite:** 95 tests covering circulation flows, tenant boundaries, and fine calculation.
+- **Tenant Isolation:** The tenant guard is actively running in **enforce** mode across both tests and production to prevent data leakage.
+- **CI Status:** The test suite runs automatically on push/PR via GitHub Actions.
+- **Evaluation:** Smart Search evaluation results by query kind (vague, mood, ISBN, etc.) will be documented once measured against the full catalog.

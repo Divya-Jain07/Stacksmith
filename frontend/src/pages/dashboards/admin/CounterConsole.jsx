@@ -139,6 +139,8 @@ export default function CounterConsole() {
     }
   }
 
+  const isWarning = message && typeof message === 'string' && message.includes('Fine: ₹') && !message.endsWith('Fine: ₹0');
+
   return (
     <div>
       <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: '0 0 1.5rem', fontFamily: '"Manrope", sans-serif' }}>Counter Console</h2>
@@ -164,7 +166,7 @@ export default function CounterConsole() {
           </div>
           
           <div style={{ padding: '2rem' }}>
-            {message && <div style={{ background: 'rgba(76,175,80,0.1)', color: '#81C784', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18}/> {message}</div>}
+            {message && <div style={{ background: isWarning ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)', color: isWarning ? '#FFB74D' : '#81C784', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{isWarning ? <AlertCircle size={18}/> : <CheckCircle size={18}/>} {message}</div>}
             {error && <div style={{ background: 'rgba(239,83,80,0.1)', color: '#EF9A9A', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertCircle size={18}/> {error}</div>}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
