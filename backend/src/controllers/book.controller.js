@@ -104,9 +104,9 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
       let rowNum = 1; // 1 represents headers conceptually, data starts at 2
       for (const row of results) {
         rowNum++;
-        const { Title, Author, ISBN, Genre, Language, Publisher, YearPublished, Copies } = row;
+        const { Title, Author, ISBN, Genre, Language, Publisher, YearPublished, Copies, Description } = row;
         
-        if (!Title || !Author || !ISBN || !Genre || !Language || !Publisher || !YearPublished || !Copies) {
+        if (!Title || !Author || !ISBN || !Genre || !Language || !Publisher || !YearPublished || !Copies || !Description) {
           errors.push({ row: rowNum, isbn: ISBN, reason: 'Missing required columns.' });
           skipped++;
           invalid++;
@@ -142,6 +142,7 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
             language: Language,
             publisher: Publisher,
             yearPublished: parseInt(YearPublished, 10),
+            description: Description,
             adminId
           });
           await book.save();

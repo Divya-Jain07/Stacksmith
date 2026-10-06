@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Plus, Upload, Book, X, Edit3, Trash2, Layers } from 'lucide-react'
+import { Search, Plus, Upload, Book, X, Edit3, Trash2, Layers, Loader2 } from 'lucide-react'
 import { useAuth } from '../../../context/AuthContext'
 import { useDialog } from '../../../context/DialogContext'
 import { bookApi } from '../../../services/api'
@@ -23,6 +23,7 @@ export default function Catalog() {
   const [managingCopiesBook, setManagingCopiesBook] = useState(null)
   const [bookCopies, setBookCopies] = useState([])
   const [copiesLoading, setCopiesLoading] = useState(false)
+  const [importLoading, setImportLoading] = useState(false)
   const [importNotice, setImportNotice] = useState(null)
 
   const fetchBooks = async () => {
@@ -100,6 +101,11 @@ export default function Catalog() {
     if (user?.adminId) {
       fd.append('adminId', user.adminId)
     }
+    setImportLoading(true)
+    setImportNotice({
+      type: 'info',
+      message: `Processing "${file.name}"... Parsing records and updating inventory.`
+    })
     try {
       const res = await bookApi.bulkImport(fd)
       const messageParts = []
@@ -116,8 +122,10 @@ export default function Catalog() {
       fetchBooks()
     } catch (err) {
       setImportNotice({ type: 'error', message: err.message || 'Failed to bulk import' })
+    } finally {
+      setImportLoading(false)
+      e.target.value = ''
     }
-    e.target.value = ''
   }
 
   const handleManageCopies = async (book) => {

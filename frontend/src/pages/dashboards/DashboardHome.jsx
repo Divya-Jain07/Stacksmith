@@ -72,7 +72,7 @@ export default function DashboardHome() {
             Good {greeting()}, {user?.name?.split(' ')[0]} !
           </h1>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            Your library operations hub — counter, catalog, members and more.
+            Your library operations hub - counter, catalog, members and more.
           </p>
         </div>
         

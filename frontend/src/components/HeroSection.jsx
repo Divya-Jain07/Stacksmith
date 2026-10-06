@@ -157,7 +157,7 @@ export default function HeroSection() {
                 : '0 4px 20px rgba(60,30,10,0.35)',
             }}>
               <span style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.88rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                🖥️ Staff Portal
+                Staff Portal
               </span>
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.58rem', letterSpacing: '0.05em', color: 'rgba(255,255,255,0.70)' }}>
                 Admin · Librarian
@@ -183,7 +183,7 @@ export default function HeroSection() {
               WebkitBackdropFilter: 'blur(10px)',
             }}>
               <span style={{ fontFamily: '"Inter", sans-serif', fontSize: '0.88rem', fontWeight: 700, color: P.text, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                📚 Member Kiosk
+                Member Kiosk
               </span>
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.58rem', letterSpacing: '0.05em', color: P.muted }}>
                 Students · Faculty
