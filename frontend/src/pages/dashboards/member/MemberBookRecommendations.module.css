@@ -30,10 +30,16 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
 }
 
 .recommendationsPage .recommendationColumns > section {
   min-height: 0;
+  overflow: hidden;
+}
+
+.recommendationsPage .recommendationColumns > section:first-child {
   overflow-y: auto;
 }
 
