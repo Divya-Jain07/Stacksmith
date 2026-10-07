@@ -1,16 +1,17 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, BookOpen, MessageSquare, Sparkles, History } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 
 import MemberDashboardHome from './member/MemberDashboardHome'
 import MemberCatalog from './member/MemberCatalog'
+import MemberRecommendations from './member/MemberRecommendations'
 import MemberChatHub from './member/MemberChatHub'
 import MemberHistory from './member/MemberHistory'
-import { History } from 'lucide-react'
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Dashboard',     href: '/member' },
   { icon: BookOpen,        label: 'Catalog',       href: '/member/catalog' },
+  { icon: Sparkles,        label: 'Recommend me',  href: '/member/recommendations' },
   { icon: MessageSquare,   label: 'Helpdesk Chat', href: '/member/chat' },
   { icon: History,         label: 'History',       href: '/member/history' }
 ]
@@ -21,6 +22,7 @@ export default function MemberDashboard() {
       <Routes>
         <Route path="/" element={<MemberDashboardHome />} />
         <Route path="/catalog" element={<MemberCatalog />} />
+        <Route path="/recommendations" element={<MemberRecommendations />} />
         <Route path="/chat" element={<MemberChatHub />} />
         <Route path="/history" element={<MemberHistory />} />
         <Route path="*" element={<Navigate to="/member" replace />} />

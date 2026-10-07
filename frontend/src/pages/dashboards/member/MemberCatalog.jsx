@@ -3,6 +3,7 @@ import { Search, Book, Clock, X, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { bookApi, borrowApi } from '../../../services/api'
 import { useDialog } from '../../../context/DialogContext'
+import layoutStyles from './MemberBookRecommendations.module.css'
 
 export default function MemberCatalog() {
   const [books, setBooks] = useState([])
@@ -239,11 +240,12 @@ export default function MemberCatalog() {
       <AnimatePresence>
         {detailsModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '90%', maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', padding: '2rem', borderRadius: '16px', width: '94%', maxWidth: '1000px', maxHeight: '88vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ color: 'var(--text-main)', fontSize: '1.25rem', margin: 0 }}>Book Details</h3>
                 <button onClick={() => setDetailsModal(null)} style={{ background: 'none', border: 'none', color: '#EF5350', cursor: 'pointer' }}><X size={20}/></button>
               </div>
+              <div className={layoutStyles.detailsRecommendationLayout}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', color: 'var(--text-main)', fontSize: '0.95rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Title:</strong> <span>{detailsModal.name}</span></div>
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Author:</strong> <span>{detailsModal.author}</span></div>
@@ -256,13 +258,13 @@ export default function MemberCatalog() {
                 <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '0.5rem' }}><strong style={{ color: 'var(--text-muted)' }}>Description:</strong> <span style={{ lineHeight: '1.4' }}>{detailsModal.description || 'No description available.'}</span></div>
               </div>
               
-              <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+              <div style={{ minWidth: 0 }}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>More like this <Sparkles size={16} aria-hidden="true" /></h4>
                 {similarLoading ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Finding similar books...</div>
                 ) : similarBooks.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {similarBooks.map(sim => (
+                    {similarBooks.slice(0, 10).map(sim => (
                       <div key={sim._id} onClick={() => openDetails(sim)} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}>
                         <div>
                           <div style={{ color: 'var(--accent-gold)', fontWeight: 500, fontSize: '0.95rem' }}>{sim.name}</div>
@@ -277,6 +279,7 @@ export default function MemberCatalog() {
                 ) : (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>No similar books found in this branch.</div>
                 )}
+              </div>
               </div>
             </motion.div>
           </motion.div>

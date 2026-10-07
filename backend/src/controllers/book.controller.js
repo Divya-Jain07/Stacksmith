@@ -469,7 +469,7 @@ exports.getSimilarBooks = catchAsync(async (req, res, next) => {
   })
   .filter(b => b.similarity > 0.6)
   .sort((a, b) => b.similarity - a.similarity)
-  .slice(0, 5);
+  .slice(0, 10);
 
   const bookIds = similar.map(b => b._id);
   const copyAgg = await BookCopy.aggregate([

@@ -1,0 +1,20 @@
+.detailsRecommendationLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.recommendationColumns {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.2fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .detailsRecommendationLayout,
+  .recommendationColumns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
