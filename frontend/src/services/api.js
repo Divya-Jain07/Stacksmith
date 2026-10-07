@@ -1,5 +1,5 @@
 /**
- * services/api.js — Stacksmith API Service Layer
+ * services/api.js - Stacksmith API Service Layer
  *
  * Centralises all HTTP calls to the Express backend.
  * Every call automatically attaches the Bearer token from localStorage.
@@ -30,7 +30,7 @@ async function request(method, path, body = null, skipAuth = false) {
   const data = res.status !== 204 ? await res.json().catch(() => ({})) : {}
 
   if (!res.ok) {
-    // Normalise error — backend sends { error: '...' }
+    // Normalise error - backend sends { error: '...' }
     const message = data?.error ?? `Request failed with status ${res.status}`
     throw Object.assign(new Error(message), { status: res.status, data })
   }

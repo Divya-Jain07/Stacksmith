@@ -123,10 +123,10 @@ export default function DashboardHome() {
 
       {/* KPI Dashboard */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 250px), 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <MetricCard label="Active Borrows" value={loading ? '—' : stats?.activeBorrows} icon={<BookOpen size={20} color="#B8860B" />} color="#B8860B" />
-        <MetricCard label="Overdue Books" value={loading ? '—' : stats?.overdueBorrows} icon={<AlertCircle size={20} color="#EF5350" />} color="#EF5350" />
-        <MetricCard label="Fines Collected" value={loading ? '—' : `₹${(stats?.fines?.collected || 0).toFixed(2)}`} icon={<DollarSign size={20} color="#4CAF50" />} color="#4CAF50" />
-        <MetricCard label="Books Need Repair" value={loading ? '—' : stats?.poorConditionBooks} icon={<LayoutDashboard size={20} color="#FF9800" />} color="#FF9800" />
+        <MetricCard label="Active Borrows" value={loading ? '-' : stats?.activeBorrows} icon={<BookOpen size={20} color="#B8860B" />} color="#B8860B" />
+        <MetricCard label="Overdue Books" value={loading ? '-' : stats?.overdueBorrows} icon={<AlertCircle size={20} color="#EF5350" />} color="#EF5350" />
+        <MetricCard label="Fines Collected" value={loading ? '-' : `₹${(stats?.fines?.collected || 0).toFixed(2)}`} icon={<DollarSign size={20} color="#4CAF50" />} color="#4CAF50" />
+        <MetricCard label="Books Need Repair" value={loading ? '-' : stats?.poorConditionBooks} icon={<LayoutDashboard size={20} color="#FF9800" />} color="#FF9800" />
       </div>
 
       {/* Top Members */}

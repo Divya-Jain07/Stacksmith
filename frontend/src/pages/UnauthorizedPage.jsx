@@ -44,7 +44,7 @@ export default function UnauthorizedPage() {
         textTransform: 'uppercase',
         color: '#EF5350',
       }}>
-        403 — Access Denied
+        403 - Access Denied
       </span>
 
       <h1 style={{

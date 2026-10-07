@@ -1,5 +1,5 @@
 /**
- * constants/roles.js — Stacksmith Role Constants
+ * constants/roles.js - Stacksmith Role Constants
  *
  * Single source of truth for all role strings.
  * Mirror of backend src/constants.js  +  SuperAdmin which the
@@ -13,7 +13,7 @@ export const ROLES = {
   MEMBER:      'Member',
 }
 
-/** Staff roles — Admin or Librarian (or SuperAdmin) */
+/** Staff roles - Admin or Librarian (or SuperAdmin) */
 export const STAFF_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.LIBRARIAN]
 
 /** Route destinations per role */

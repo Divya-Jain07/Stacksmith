@@ -118,7 +118,7 @@ export default function HowItWorksSection() {
             color: 'var(--text-main)',
             margin: '1rem 0 1.25rem',
           }}>
-            From setup to scale —{' '}
+            From setup to scale -{' '}
             <span style={goldGrad}>five simple steps.</span>
           </h2>
           <p style={{
@@ -164,7 +164,7 @@ export default function HowItWorksSection() {
               alignItems: 'center',
             }}
           >
-            {/* Left — main content */}
+            {/* Left - main content */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
                 <div style={{
@@ -226,7 +226,7 @@ export default function HowItWorksSection() {
 
             </div>
 
-            {/* Right — checklist */}
+            {/* Right - checklist */}
             <div>
               <p style={{
                 fontFamily: '"Inter", sans-serif',

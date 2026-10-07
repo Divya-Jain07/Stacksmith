@@ -125,7 +125,7 @@ export default function MemberCatalog() {
           </div>
         )}
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ position: 'relative', maxWidth: '500px', width: '100%', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ position: 'relative', maxWidth: '620px', width: '100%', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <select 
               value={searchField} onChange={e => setSearchField(e.target.value)}
               style={{ padding: '0.65rem 1rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', minWidth: '120px' }}
@@ -257,7 +257,7 @@ export default function MemberCatalog() {
               </div>
               
               <div style={{ marginTop: '2rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
-                <h4 style={{ color: 'var(--text-main)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>More like this ✨</h4>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: 'var(--text-main)', fontSize: '1.1rem', margin: '0 0 1rem 0' }}>More like this <Sparkles size={16} aria-hidden="true" /></h4>
                 {similarLoading ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Finding similar books...</div>
                 ) : similarBooks.length > 0 ? (

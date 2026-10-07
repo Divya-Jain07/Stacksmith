@@ -110,8 +110,8 @@ export default function MemberHistory() {
                   <tr key={b._id} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.9rem', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                     <td style={{ padding: '1rem', fontWeight: 500 }}>{b.bookCopyId?.bookId?.name || 'Unknown Book'}</td>
                     <td style={{ padding: '1rem', fontFamily: '"JetBrains Mono", monospace', fontSize: '0.85rem' }}>{b.bookCopyId?.barcode || 'N/A'}</td>
-                    <td style={{ padding: '1rem' }}>{b.borrowedDate ? new Date(b.borrowedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '—'}</td>
-                    <td style={{ padding: '1rem' }}>{b.returnedDate ? new Date(b.returnedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '—'}</td>
+                    <td style={{ padding: '1rem' }}>{b.borrowedDate ? new Date(b.borrowedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '-'}</td>
+                    <td style={{ padding: '1rem' }}>{b.returnedDate ? new Date(b.returnedDate).toLocaleDateString('en-GB').replace(/\//g, '-') : '-'}</td>
                     <td style={{ padding: '1rem' }}>
                       <span style={{
                         padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,

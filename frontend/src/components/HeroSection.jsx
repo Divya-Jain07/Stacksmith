@@ -129,18 +129,18 @@ export default function HeroSection() {
           maxWidth: '420px',
           margin: '0 auto 2rem',
         }}>
-          Role-based platform for staff, admins &amp; members —
+          Role-based platform for staff, admins &amp; members -
           issue books, track fines, and chat in real time.
         </motion.p>
 
-        {/* ── CTAs — solid contrast so they pop on any bg ── */}
+        {/* ── CTAs - solid contrast so they pop on any bg ── */}
         <motion.div variants={fadeUp} style={{
           display: 'flex',
           gap: '1.25rem',
           justifyContent: 'center',
           flexWrap: 'wrap',
         }}>
-          {/* Primary: solid dark brown — always visible */}
+          {/* Primary: solid dark brown - always visible */}
           <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
             <Link to="/login" style={{
               display: 'inline-flex',
@@ -165,7 +165,7 @@ export default function HeroSection() {
             </Link>
           </motion.div>
 
-          {/* Secondary: white/opaque — always visible */}
+          {/* Secondary: white/opaque - always visible */}
           <motion.div whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
             <Link to="/login?tab=member" style={{
               display: 'inline-flex',
@@ -191,7 +191,7 @@ export default function HeroSection() {
             </Link>
           </motion.div>
         </motion.div>
-        {/* ── Scroll hint — in normal flow, below buttons ── */}
+        {/* ── Scroll hint - in normal flow, below buttons ── */}
         <motion.div
           variants={fadeUp}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '2rem', opacity: 0.7 }}

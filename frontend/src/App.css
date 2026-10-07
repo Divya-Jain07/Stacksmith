@@ -1,8 +1,8 @@
 /*
- * App.css — intentionally empty.
+ * App.css - intentionally empty.
  *
  * All styling for Stacksmith is handled through:
- *   1. src/index.css  — Tailwind v4 @theme + @layer base/components/utilities
+ *   1. src/index.css  - Tailwind v4 @theme + @layer base/components/utilities
  *   2. Tailwind utility classes applied directly in JSX
  *   3. Framer Motion inline styles for animated values
  *

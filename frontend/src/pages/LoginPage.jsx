@@ -1,9 +1,9 @@
 /**
- * pages/LoginPage.jsx — Stacksmith Unified Login
+ * pages/LoginPage.jsx - Stacksmith Unified Login
  *
  * Two tabs:
- *   • Staff   — email + password  → POST /api/auth/staff-login
- *   • Member  — memberCode + password → POST /api/auth/member-login
+ *   • Staff   - email + password  → POST /api/auth/staff-login
+ *   • Member  - memberCode + password → POST /api/auth/member-login
  *
  * After successful login, AuthContext.applySession() handles the redirect.
  * If the user arrived from a protected route, they're sent back there instead.
@@ -12,7 +12,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Eye, EyeOff, LogIn, AlertCircle, BookOpen } from 'lucide-react'
+import { Eye, EyeOff, LogIn, AlertCircle, BookOpen, Monitor } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { ROLE_ROUTES } from '../constants/roles'
@@ -149,9 +149,9 @@ export default function LoginPage() {
           border: '1px solid rgba(255,255,255,0.07)',
         }}>
           {[
-            { key: 'staff', label: '🖥️ Staff Portal' },
-            { key: 'member', label: '📚 Member Kiosk' },
-          ].map(({ key, label }) => (
+            { key: 'staff', label: 'Staff Portal', icon: Monitor },
+            { key: 'member', label: 'Member Kiosk', icon: BookOpen },
+          ].map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => switchTab(key)}
@@ -171,7 +171,9 @@ export default function LoginPage() {
                 boxShadow: tab === key ? '0 2px 10px rgba(184,134,11,0.35)' : 'none',
               }}
             >
-              {label}
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '0.45rem' }}>
+                <Icon size={16} aria-hidden="true" /> {label}
+              </span>
             </button>
           ))}
         </div>

@@ -1,5 +1,5 @@
 /* =========================================================
-   Stacksmith — Global Design System
+   Stacksmith - Global Design System
    Tailwind CSS v4  |  @theme inline configuration
    ========================================================= */
 
@@ -223,7 +223,7 @@
 }
 
 /* ---------------------------------------------------------
-   3. COMPONENT LAYER — reusable utility classes
+   3. COMPONENT LAYER - reusable utility classes
    --------------------------------------------------------- */
 @layer components {
   /* ── Buttons ── */
@@ -433,7 +433,7 @@
 }
 
 /* ---------------------------------------------------------
-   4. UTILITY LAYER — one-off helpers
+   4. UTILITY LAYER - one-off helpers
    --------------------------------------------------------- */
 @layer utilities {
   .text-balance   { text-wrap: balance; }

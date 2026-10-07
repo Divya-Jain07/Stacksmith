@@ -62,10 +62,10 @@ export default function MemberDashboardHome() {
 
       {/* KPIs */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-        <MetricCard label="Active Borrows" value={loading ? '—' : activeBorrows.length} icon={<BookOpen size={20} color="#B8860B" />} color="#B8860B" />
-        <MetricCard label="Pending Requests" value={loading ? '—' : pendingRequests.length} icon={<Clock size={20} color="#1565C0" />} color="#1565C0" />
-        <MetricCard label="Overdue Books" value={loading ? '—' : overdueBorrows.length} icon={<AlertCircle size={20} color="#EF5350" />} color="#EF5350" />
-        <MetricCard label="Unpaid Fines" value={loading ? '—' : `₹${totalFines.toFixed(2)}`} icon={<DollarSign size={20} color="#4CAF50" />} color="#4CAF50" />
+        <MetricCard label="Active Borrows" value={loading ? '-' : activeBorrows.length} icon={<BookOpen size={20} color="#B8860B" />} color="#B8860B" />
+        <MetricCard label="Pending Requests" value={loading ? '-' : pendingRequests.length} icon={<Clock size={20} color="#1565C0" />} color="#1565C0" />
+        <MetricCard label="Overdue Books" value={loading ? '-' : overdueBorrows.length} icon={<AlertCircle size={20} color="#EF5350" />} color="#EF5350" />
+        <MetricCard label="Unpaid Fines" value={loading ? '-' : `₹${totalFines.toFixed(2)}`} icon={<DollarSign size={20} color="#4CAF50" />} color="#4CAF50" />
       </div>
 
       {/* Active Borrowings List */}

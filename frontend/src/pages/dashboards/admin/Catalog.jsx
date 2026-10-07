@@ -223,7 +223,7 @@ export default function Catalog() {
 
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-color)', borderRadius: '12px', overflow: 'hidden' }}>
         <div style={{ padding: '1rem', borderBottom: '1px solid var(--border-color)' }}>
-          <div style={{ position: 'relative', maxWidth: '500px', width: '100%', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ position: 'relative', maxWidth: '620px', width: '100%', display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             <select 
               value={searchField} onChange={e => setSearchField(e.target.value)}
               style={{ padding: '0.65rem 1rem', background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.9rem', outline: 'none', cursor: 'pointer', minWidth: '120px' }}

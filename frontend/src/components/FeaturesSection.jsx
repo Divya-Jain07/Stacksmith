@@ -44,7 +44,7 @@ const FEATURES = [
     label: 'Member Support Chat',
     tagline: 'Help patrons in real time.',
     description:
-      'Three-pane chat hub with an unassigned queue, scrollable message history with read receipts, and a member-context sidebar — all powered by WebSockets.',
+      'Three-pane chat hub with an unassigned queue, scrollable message history with read receipts, and a member-context sidebar - all powered by WebSockets.',
     pills: ['WebSocket Live', 'Unassigned Queue', 'Member Context', 'Read Ticks'],
   },
   {
@@ -54,7 +54,7 @@ const FEATURES = [
     label: 'Fine Management',
     tagline: 'Close the loop on payments.',
     description:
-      'Searchable fine ledger with reason tagging (overdue, damaged, lost). Collect via Cash / UPI / Card modal or waive with reason — role-restricted to Admin.',
+      'Searchable fine ledger with reason tagging (overdue, damaged, lost). Collect via Cash / UPI / Card modal or waive with reason - role-restricted to Admin.',
     pills: ['Multi-mode Pay', 'Waive (Admin)', 'Fine Ledger', 'Receipt Log'],
   },
   {
@@ -64,7 +64,7 @@ const FEATURES = [
     label: 'Mobile Ready',
     tagline: 'Works on every device.',
     description:
-      'Fully responsive layouts for the member kiosk portal — browse the catalog, request holds, track due dates, and chat with staff from any phone or tablet.',
+      'Fully responsive layouts for the member kiosk portal - browse the catalog, request holds, track due dates, and chat with staff from any phone or tablet.',
     pills: ['Self-service', 'Responsive UI', 'Hold Requests', 'FIFO Queue'],
   },
   {
@@ -108,7 +108,7 @@ export default function FeaturesSection() {
         transition: 'background 0.3s ease',
       }}
     >
-      {/* Subtle accent blob — low opacity so it works in both themes */}
+      {/* Subtle accent blob - low opacity so it works in both themes */}
       <div style={{
         position: 'absolute', top: '5%', right: '-6%',
         width: 460, height: 460, borderRadius: '50%',
@@ -255,7 +255,7 @@ function FeatureCard({ feature }) {
         {feature.tagline}
       </p>
 
-      {/* Description — reveals on hover */}
+      {/* Description - reveals on hover */}
       <AnimatePresence>
         {hovered && (
           <motion.p

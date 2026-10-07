@@ -1,5 +1,5 @@
 /**
- * App.jsx — Stacksmith Router Root
+ * App.jsx - Stacksmith Router Root
  *
  * Route map:
  *   /                → LandingPage        (public)

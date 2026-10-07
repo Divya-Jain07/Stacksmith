@@ -1,5 +1,5 @@
 /**
- * theme.js — Stacksmith Design Tokens (JavaScript)
+ * theme.js - Stacksmith Design Tokens (JavaScript)
  *
  * Single source of truth for brand values that need to be used
  * programmatically (e.g. in Framer Motion variants, Chart.js configs,
@@ -96,7 +96,7 @@ export const durations = {
 }
 
 export const easings = {
-  spring: [0.34, 1.56, 0.64, 1],   // cubic-bezier — use with Framer Motion type:"tween"
+  spring: [0.34, 1.56, 0.64, 1],   // cubic-bezier - use with Framer Motion type:"tween"
   smooth: [0.4,  0,    0.2,  1],
 }
 

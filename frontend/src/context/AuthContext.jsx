@@ -1,5 +1,5 @@
 /**
- * context/AuthContext.jsx — Stacksmith Authentication Provider
+ * context/AuthContext.jsx - Stacksmith Authentication Provider
  *
  * Responsibilities:
  *  • Persist token + user object in localStorage (survives page refresh)
@@ -33,7 +33,7 @@ const USER_KEY  = 'stacksmith_user'
 
 /**
  * Manually decode a JWT payload (base64url → JSON).
- * We do NOT verify the signature on the client — that is the server's job.
+ * We do NOT verify the signature on the client - that is the server's job.
  * We only read the claims to restore the UI state.
  */
 function decodeJWT(token) {
@@ -81,7 +81,7 @@ export function AuthProvider({ children }) {
 
     const decoded = decodeJWT(token)
     if (!isTokenValid(decoded)) {
-      // Token expired — wipe state silently
+      // Token expired - wipe state silently
       clearSession()
     }
   }, []) // run once on mount
@@ -194,7 +194,7 @@ export function AuthProvider({ children }) {
     isMember,
     isStaff,
 
-    // Raw role string — for ProtectedRoute comparisons
+    // Raw role string - for ProtectedRoute comparisons
     role: user?.role ?? null,
   }), [
     token, user, loading, error,
@@ -212,7 +212,7 @@ export function AuthProvider({ children }) {
 /* ── Consumer hook ────────────────────────────────────────────────────────── */
 
 /**
- * useAuth() — access the authentication context from any component.
+ * useAuth() - access the authentication context from any component.
  *
  * @example
  *   const { user, isStaff, logout } = useAuth()

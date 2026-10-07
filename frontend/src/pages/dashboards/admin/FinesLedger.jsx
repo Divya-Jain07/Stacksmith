@@ -6,7 +6,7 @@ import { useDialog } from '../../../context/DialogContext'
 import { ROLES } from '../../../constants/roles'
 import { fineApi } from '../../../services/api'
 
-// Shared currency symbol — change here to affect all fine displays
+// Shared currency symbol - change here to affect all fine displays
 const CURRENCY = '₹'
 
 // Map stored DB values to display labels
@@ -274,7 +274,7 @@ export default function FinesLedger() {
                   {data.fines.map((fine, idx) => (
                     <tr key={fine._id} style={{ borderBottom: '1px solid var(--border-color)', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                       <td style={td}>
-                        <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.9rem' }}>{fine.borrowedUser?.name || '—'}</div>
+                        <div style={{ fontWeight: 500, color: 'var(--text-main)', fontSize: '0.9rem' }}>{fine.borrowedUser?.name || '-'}</div>
                         <div style={{ color: 'var(--text-muted)', fontSize: '0.78rem', fontFamily: '"JetBrains Mono", monospace' }}>{fine.borrowedUser?.memberCode || ''}</div>
                       </td>
                       <td style={{ ...td, maxWidth: '180px' }}>
