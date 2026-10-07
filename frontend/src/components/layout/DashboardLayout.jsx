@@ -140,7 +140,7 @@ export default function DashboardLayout({ navItems, children }) {
       </motion.aside>
 
       {/* ── Main ── */}
-      <main style={{ flex: 1, padding: 'clamp(1.5rem, 4vw, 2.5rem)', overflowY: 'auto' }}>
+      <main className={location.pathname.startsWith('/member') ? 'scrollbar-none' : undefined} style={{ flex: 1, padding: 'clamp(1.5rem, 4vw, 2.5rem)', overflowY: 'auto' }}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0  }} transition={{ delay: 0.15, duration: 0.45 }}>
           {children}
         </motion.div>
