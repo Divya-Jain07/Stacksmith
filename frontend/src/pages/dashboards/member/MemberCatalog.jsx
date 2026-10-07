@@ -263,7 +263,7 @@ export default function MemberCatalog() {
                 {similarLoading ? (
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Finding similar books...</div>
                 ) : similarBooks.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className={layoutStyles.recommendationList} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {similarBooks.slice(0, 10).map(sim => (
                       <div key={sim._id} onClick={() => openDetails(sim)} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--bg-hover)', borderRadius: '8px', cursor: 'pointer', transition: 'background 0.2s' }}>
                         <div>

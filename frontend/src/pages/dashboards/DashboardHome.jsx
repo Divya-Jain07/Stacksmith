@@ -76,7 +76,7 @@ export default function DashboardHome() {
           </p>
         </div>
         
-        {role === ROLES.ADMIN && (
+        {/* {role === ROLES.ADMIN && (
           <button
             onClick={() => setIsModalOpen(true)}
             style={{
@@ -88,7 +88,7 @@ export default function DashboardHome() {
           >
             <Plus size={16} /> Create Librarian
           </button>
-        )}
+        )} */}
       </div>
 
       {error && (

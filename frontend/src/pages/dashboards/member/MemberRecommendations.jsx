@@ -96,7 +96,7 @@ export default function MemberRecommendations() {
             {loadingRecommendations ? (
               <div style={{ color: 'var(--text-muted)' }}>Finding similar books...</div>
             ) : recommendations.length ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div className={layoutStyles.recommendationList} style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 {recommendations.map((book, index) => (
                   <div key={book._id} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', padding: '0.8rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'var(--bg-surface)' }}>
                     <div style={{ display: 'flex', gap: '0.75rem', minWidth: 0 }}>

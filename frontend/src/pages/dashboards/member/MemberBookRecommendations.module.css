@@ -12,9 +12,24 @@
   align-items: start;
 }
 
+.recommendationList {
+  max-height: min(58vh, 560px);
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.recommendationList::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 700px) {
   .detailsRecommendationLayout,
   .recommendationColumns {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recommendationList {
+    max-height: 52vh;
   }
 }
