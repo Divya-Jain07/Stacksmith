@@ -192,14 +192,12 @@
     outline-offset: 2px;
   }
 
-  /* Scrollbar */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: var(--color-primary-light); }
-  ::-webkit-scrollbar-thumb {
-    background: var(--color-secondary);
-    border-radius: var(--radius-full);
+  /* Keep scrolling functional without displaying scrollbar chrome. */
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-  ::-webkit-scrollbar-thumb:hover { background: var(--color-tertiary); }
+  *::-webkit-scrollbar { display: none; }
 
   /* Selection */
   ::selection {

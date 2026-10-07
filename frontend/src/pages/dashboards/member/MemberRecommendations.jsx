@@ -47,7 +47,7 @@ export default function MemberRecommendations() {
   }
 
   return (
-    <div>
+    <div className={layoutStyles.recommendationsPage}>
       <div style={{ marginBottom: '1.5rem' }}>
         <h2 style={{ color: 'var(--text-main)', fontSize: '1.5rem', margin: 0, fontFamily: '"Averia Sans Libre", system-ui' }}>Recommend me</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.5rem 0 0' }}>Choose a book to discover titles with similar themes and content.</p>

@@ -12,6 +12,36 @@
   align-items: start;
 }
 
+.recommendationsPage {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+}
+
+.recommendationsPage > :first-child,
+.recommendationsPage > :nth-child(2),
+.recommendationsPage > [role='alert'] {
+  flex-shrink: 0;
+}
+
+.recommendationsPage .recommendationColumns {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.recommendationsPage .recommendationColumns > section {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.recommendationsPage .recommendationColumns > section:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
 .recommendationList {
   max-height: min(58vh, 560px);
   overflow-y: auto;
@@ -23,6 +53,12 @@
   display: none;
 }
 
+.recommendationsPage .recommendationList {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
 @media (max-width: 700px) {
   .detailsRecommendationLayout,
   .recommendationColumns {
@@ -31,5 +67,14 @@
 
   .recommendationList {
     max-height: 52vh;
+  }
+
+  .recommendationsPage .recommendationColumns {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, auto) minmax(0, 1fr);
+  }
+
+  .recommendationsPage .recommendationColumns > section:first-child {
+    max-height: 28vh;
   }
 }

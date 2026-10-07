@@ -11,6 +11,7 @@ export default function DashboardLayout({ navItems, children }) {
   const { user, role, logout } = useAuth()
   const { isDarkMode } = useTheme()
   const location = useLocation()
+  const isMemberRecommendations = location.pathname === '/member/recommendations'
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
   const [isPwdModalOpen, setIsPwdModalOpen] = useState(false)
@@ -140,8 +141,8 @@ export default function DashboardLayout({ navItems, children }) {
       </motion.aside>
 
       {/* ── Main ── */}
-      <main className={location.pathname.startsWith('/member') ? 'scrollbar-none' : undefined} style={{ flex: 1, padding: 'clamp(1.5rem, 4vw, 2.5rem)', overflowY: 'auto' }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0  }} transition={{ delay: 0.15, duration: 0.45 }}>
+      <main className={location.pathname.startsWith('/member') ? 'scrollbar-none' : undefined} style={{ flex: 1, minHeight: 0, padding: 'clamp(1.5rem, 4vw, 2.5rem)', overflowY: isMemberRecommendations ? 'hidden' : 'auto', display: isMemberRecommendations ? 'flex' : undefined, flexDirection: isMemberRecommendations ? 'column' : undefined }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0  }} transition={{ delay: 0.15, duration: 0.45 }} style={isMemberRecommendations ? { flex: 1, minHeight: 0, display: 'flex' } : undefined}>
           {children}
         </motion.div>
       </main>
