@@ -105,7 +105,7 @@ Stacksmith/
 │       │                   #   BookReservation, Fine, Conversation, Message
 │       ├── routes/         # /api/admin, /api/auth, /api/books, /api/borrow, /api/chat, etc.
 │       ├── socket/          # Socket.IO chat handler
-│       ├── utils/           # ApiError, catchAsync, fineCalculator, validation
+│       ├── utils/           # ApiError, catchAsync, fineCalculator, transaction
 │       ├── app.js
 │       └── index.js
 └── frontend/
@@ -244,14 +244,14 @@ The Alchemist,Paulo Coelho,9780061122415,Fiction,English,HarperOne,1988,3,A phil
 
 ## Smart Search & AI Features
 Stacksmith features a **Smart Search** and **More Like This** recommendation system for members exploring the catalog. 
-- **Retrieval Only:** This feature uses semantic embeddings to find books by mood, theme, or topic (e.g. "a book about space travel" or "something like Harry Potter"). No LLM is used to generate text.
-- **Privacy First:** No member data is sent to the embedding provider. Only the book catalog data (title, author, genre, description) is embedded.
+- **Hybrid retrieval:** Combines keyword matching (title, author, genre) with semantic search over Gemini embeddings, merged with Reciprocal Rank Fusion. Members can search by mood, theme or topic (e.g. "a book about space travel") and still find exact titles. If the embedding service is unavailable, it falls back to keyword results. No LLM generates text.
+- **Privacy First:** No member data is sent to the embedding provider. Only book catalog data (title, author, genre, description) is embedded.
 
 *Note: For the best Smart Search experience, ensure books have comprehensive descriptions. Current catalog description coverage is ~83%.*
 
 ## Testing & Stability
-Stacksmith has comprehensive automated test coverage for concurrency, tenant isolation, and borrowing logic.
-- **Test Suite:** 95 tests covering circulation flows, tenant boundaries, and fine calculation.
-- **Tenant Isolation:** The tenant guard is actively running in **enforce** mode across both tests and production to prevent data leakage.
-- **CI Status:** The test suite runs automatically on push/PR via GitHub Actions.
-- **Evaluation:** Smart Search evaluation results by query kind (vague, mood, ISBN, etc.) will be documented once measured against the full catalog.
+- **Test Suite:** 95 Jest/Supertest tests covering circulation flows, concurrent issue/return, tenant isolation, the tenant guard and fine calculation. They run against an in-memory MongoDB replica set so transactions work in tests.
+- **Tenant Isolation:** The tenant guard runs in **enforce** mode in tests and production to prevent cross-branch data access.
+- **CI Status:** The test suite runs automatically on push and pull requests via GitHub Actions.
+- **Not yet covered:** Socket.IO chat, an explicit role-permission matrix, and the frontend.
+- **Smart Search evaluation:** Relevance has not been measured yet; results by query type will be documented once evaluated.
