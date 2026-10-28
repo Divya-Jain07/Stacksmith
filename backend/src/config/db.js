@@ -3,11 +3,13 @@ const dns = require('dns');
 
 const connectDB = async () => {
   try {
-    // Configure public DNS resolvers to avoid Windows c-ares SRV lookup failures
-    try {
-      dns.setServers(['1.1.1.1', '8.8.8.8']);
-    } catch (dnsError) {
-      console.warn('Warning: Failed to set custom DNS servers:', dnsError.message);
+    // Configure public DNS resolvers only if explicitly opted in via USE_PUBLIC_DNS
+    if (process.env.USE_PUBLIC_DNS === 'true') {
+      try {
+        dns.setServers(['1.1.1.1', '8.8.8.8']);
+      } catch (dnsError) {
+        console.warn('Warning: Failed to set custom DNS servers:', dnsError.message);
+      }
     }
     const uri = process.env.MONGO_URI;
     if (!uri) {

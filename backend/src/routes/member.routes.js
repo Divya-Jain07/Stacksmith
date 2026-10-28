@@ -4,8 +4,8 @@ const memberController = require('../controllers/member.controller');
 const { authorize, requireSelfOrStaff } = require('../middlewares/auth.middleware');
 
 // Self-Service Routes (must be before /:id)
-router.get('/me/borrowings', requireSelfOrStaff(), memberController.getMyBorrowings);
-router.get('/me/fines', requireSelfOrStaff(), memberController.getMyFines);
+router.get('/me/borrowings', requireSelfOrStaff({ skipIdCheck: true }), memberController.getMyBorrowings);
+router.get('/me/fines', requireSelfOrStaff({ skipIdCheck: true }), memberController.getMyFines);
 
 // POST  /api/members     - Register a new member (Staff only)
 // GET   /api/members     - List all members (Staff only)

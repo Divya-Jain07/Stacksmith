@@ -309,7 +309,7 @@ export default function SuperAdminDashboard() {
                       <td style={tdStyle}>{lib.metrics.books}</td>
                       <td style={tdStyle}>{lib.metrics.members}</td>
                       <td style={tdStyle}>{lib.metrics.activeBorrows}</td>
-                      <td style={tdStyle}>${(lib.metrics.revenueCollected || 0).toFixed(2)}</td>
+                      <td style={tdStyle}>₹{(lib.metrics.revenueCollected || 0).toFixed(2)}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>
                         <button 
                           onClick={() => {

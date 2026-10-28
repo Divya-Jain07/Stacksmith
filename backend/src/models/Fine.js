@@ -10,6 +10,7 @@ const FineSchema = new mongoose.Schema({
   paymentMode: { type: String, enum: ['Cash', 'UPI', 'Card', 'None'], default: 'None' },
   collectedAt: { type: Date },
   paymentCollectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'LibrarianStaff' },
+  collectedByUser: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   waivedAt: { type: Date },
   waivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

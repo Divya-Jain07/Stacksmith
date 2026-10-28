@@ -24,6 +24,33 @@ export default function CounterConsole() {
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedBookCopies, setSelectedBookCopies] = useState(null)
 
+  // Return preview & result card states
+  const [previewData, setPreviewData] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [returnResult, setReturnResult] = useState(null)
+
+  // Trigger preview fetch when barcode changes on return tab
+  useEffect(() => {
+    if (tab !== 'return' || !formData.barcode.trim()) {
+      setPreviewData(null)
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setPreviewLoading(true)
+        const data = await borrowApi.previewReturn(formData.barcode.trim())
+        setPreviewData(data)
+      } catch (err) {
+        setPreviewData(null)
+      } finally {
+        setPreviewLoading(false)
+      }
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [tab, formData.barcode])
+
   const fetchPending = async () => {
     try {
       setLoadingPending(true)
@@ -100,8 +127,61 @@ export default function CounterConsole() {
     setError(null)
   }
 
+  const handleReturnProcess = async (markPaidImmediately = false) => {
+    setLoading(true)
+    setMessage(null)
+    setError(null)
+    const trimmedBarcode = formData.barcode.trim();
+
+    try {
+      if (!trimmedBarcode) throw new Error('Barcode required for Return')
+      const res = await borrowApi.returnBook({ barcode: trimmedBarcode })
+      
+      let isPaid = false;
+      if (markPaidImmediately && res.fineId && res.fineAmount > 0) {
+        try {
+          const { fineApi } = await import('../../../services/api');
+          await fineApi.payFine(res.fineId);
+          isPaid = true;
+        } catch (payErr) {
+          setError(`Book returned successfully, but marking fine as paid failed: ${payErr.message}. The fine remains pending.`);
+        }
+      }
+
+      setReturnResult({
+        bookTitle: res.bookTitle || previewData?.bookTitle || 'Book',
+        memberName: res.memberName || previewData?.memberName || 'Member',
+        memberCode: res.memberCode || previewData?.memberCode || '',
+        returnedDate: res.returnedDate || new Date().toISOString(),
+        daysOverdue: res.daysOverdue !== undefined ? res.daysOverdue : (previewData?.daysOverdue || 0),
+        fineAmount: res.fineAmount !== undefined ? res.fineAmount : (previewData?.fineAmount || 0),
+        fineId: res.fineId,
+        status: isPaid ? 'Paid' : (res.fineAmount > 0 ? 'Pending' : 'Returned on time')
+      });
+
+      if (!isPaid && res.fineAmount > 0) {
+        setMessage(`Book returned. Overdue by ${res.daysOverdue} days. Fine: ₹${res.fineAmount} is pending.`);
+      } else if (isPaid) {
+        setMessage(`Book returned and fine of ₹${res.fineAmount} marked as paid in cash.`);
+      } else {
+        setMessage('Book returned on time. No fine.');
+      }
+
+      setFormData({ memberCode: '', barcode: '', dueDate: '' });
+      setPreviewData(null);
+    } catch (err) {
+      setError(err.message || 'Return failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (tab === 'return') {
+      return handleReturnProcess(false);
+    }
+
     setLoading(true)
     setMessage(null)
     setError(null)
@@ -119,10 +199,6 @@ export default function CounterConsole() {
           dueDate: formData.dueDate 
         })
         setMessage(`Book issued successfully to ${trimmedMemberCode}`)
-      } else if (tab === 'return') {
-        if (!trimmedBarcode) throw new Error('Barcode required for Return')
-        const res = await borrowApi.returnBook({ barcode: trimmedBarcode })
-        setMessage(`Book returned successfully. Fine: ₹${res.fineAmount || 0}`)
       } else if (tab === 'renew') {
         if (!trimmedBarcode || !formData.dueDate) throw new Error('Barcode and new Due Date required for Renew')
         const res = await borrowApi.renewBorrowing({ 
@@ -168,6 +244,47 @@ export default function CounterConsole() {
           <div style={{ padding: '2rem' }}>
             {message && <div style={{ background: isWarning ? 'rgba(255,152,0,0.1)' : 'rgba(76,175,80,0.1)', color: isWarning ? '#FFB74D' : '#81C784', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>{isWarning ? <AlertCircle size={18}/> : <CheckCircle size={18}/>} {message}</div>}
             {error && <div style={{ background: 'rgba(239,83,80,0.1)', color: '#EF9A9A', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><AlertCircle size={18}/> {error}</div>}
+
+            {/* Persistent Return Result Card */}
+            {returnResult && (
+              <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <h4 style={{ margin: 0, color: 'var(--text-main)', fontSize: '1rem' }}>Return Processed</h4>
+                  <span style={{
+                    padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
+                    background: returnResult.status === 'Paid' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(239, 83, 80, 0.15)',
+                    color: returnResult.status === 'Paid' ? '#4CAF50' : '#EF5350'
+                  }}>
+                    {returnResult.status}
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div><strong>Book:</strong> {returnResult.bookTitle || 'Book'}</div>
+                  <div><strong>Member:</strong> {returnResult.memberName} ({returnResult.memberCode})</div>
+                  <div><strong>Returned:</strong> {new Date(returnResult.returnedDate).toLocaleDateString('en-GB')}</div>
+                  <div><strong>Days Overdue:</strong> {returnResult.daysOverdue || 0}</div>
+                  <div><strong>Fine Amount:</strong> ₹{(returnResult.fineAmount || 0).toFixed(2)}</div>
+                </div>
+                {returnResult.status === 'Pending' && returnResult.fineId && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const { fineApi } = await import('../../../services/api');
+                        await fineApi.payFine(returnResult.fineId);
+                        setReturnResult(prev => ({ ...prev, status: 'Paid' }));
+                        setMessage('Fine marked as paid in cash successfully.');
+                      } catch (err) {
+                        setError(err.message || 'Failed to mark fine as paid.');
+                      }
+                    }}
+                    style={{ background: '#4CAF50', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '6px', fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem' }}
+                  >
+                    Mark as Paid (Cash)
+                  </button>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               {tab === 'issue' && (
@@ -234,8 +351,7 @@ export default function CounterConsole() {
                               e.preventDefault(); // Prevent blur
                               try {
                                 const copies = await bookApi.getCopies(book._id);
-                                // Filter based on action
-                                const filterStatus = tab === 'issue' ? 'available' : (tab === 'return' ? 'borrowed' : 'borrowed');
+                                const filterStatus = tab === 'issue' ? 'available' : 'borrowed';
                                 setSelectedBookCopies(copies.filter(c => c.status === filterStatus));
                               } catch (err) {
                                 console.error('Failed to fetch copies', err);
@@ -248,20 +364,43 @@ export default function CounterConsole() {
                           </div>
                         ))
                       )}
-                      
-                      {!selectedBookCopies && books.filter(b => 
-                        (b.name || '').toLowerCase().includes(formData.barcode.toLowerCase()) || 
-                        (b.author || '').toLowerCase().includes(formData.barcode.toLowerCase()) ||
-                        (b.genre || '').toLowerCase().includes(formData.barcode.toLowerCase()) ||
-                        (b.language || '').toLowerCase().includes(formData.barcode.toLowerCase()) ||
-                        (b.isbn || '').includes(formData.barcode)
-                      ).length === 0 && (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No matching books found.</div>
-                      )}
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* Return Tab: Live Return Preview Banner */}
+              {tab === 'return' && previewLoading && (
+                <div style={{ padding: '0.75rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  Checking loan status...
+                </div>
+              )}
+
+              {tab === 'return' && previewData && (
+                <div style={{
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  border: previewData.fineAmount > 0 ? '1px solid rgba(239,83,80,0.3)' : '1px solid rgba(76,175,80,0.3)',
+                  background: previewData.fineAmount > 0 ? 'rgba(239,83,80,0.08)' : 'rgba(76,175,80,0.08)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, color: previewData.fineAmount > 0 ? '#EF5350' : '#4CAF50' }}>
+                      {previewData.fineAmount > 0 
+                        ? `Overdue by ${previewData.daysOverdue} day${previewData.daysOverdue > 1 ? 's' : ''}. Fine: ₹${previewData.fineAmount}`
+                        : 'Returned on time, no fine'}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Due: {new Date(previewData.dueDate).toLocaleDateString('en-GB')}</span>
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                    Book: <strong>{previewData.bookTitle}</strong> | Member: <strong>{previewData.memberName} ({previewData.memberCode})</strong>
+                  </div>
+                  {previewData.otherPendingFinesCount > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem', color: '#FFB74D' }}>
+                      Note: Member has {previewData.otherPendingFinesCount} other pending fine(s) totaling ₹{previewData.otherPendingFinesTotal}.
+                    </div>
+                  )}
+                </div>
+              )}
 
               {(tab === 'issue' || tab === 'renew') && (
                 <div>
@@ -270,12 +409,39 @@ export default function CounterConsole() {
                 </div>
               )}
 
-              <button type="submit" disabled={loading} style={{
-                background: loading ? 'var(--accent-gold-hover)' : 'var(--accent-gold)', color: '#fff', padding: '0.9rem',
-                border: 'none', borderRadius: '8px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '1rem'
-              }}>
-                {loading ? 'Processing...' : tab === 'issue' ? 'Issue Book' : tab === 'return' ? 'Process Return' : 'Renew Book'}
-              </button>
+              {tab === 'return' && previewData?.fineAmount > 0 ? (
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleReturnProcess(true)}
+                    style={{
+                      flex: 1, background: '#4CAF50', color: '#fff', padding: '0.9rem',
+                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {loading ? 'Processing...' : 'Return & Mark Fine Paid'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => handleReturnProcess(false)}
+                    style={{
+                      flex: 1, background: 'var(--accent-gold)', color: '#fff', padding: '0.9rem',
+                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {loading ? 'Processing...' : 'Return, Fine Stays Pending'}
+                  </button>
+                </div>
+              ) : (
+                <button type="submit" disabled={loading} style={{
+                  background: loading ? 'var(--accent-gold-hover)' : 'var(--accent-gold)', color: '#fff', padding: '0.9rem',
+                  border: 'none', borderRadius: '8px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginTop: '1rem'
+                }}>
+                  {loading ? 'Processing...' : tab === 'issue' ? 'Issue Book' : tab === 'return' ? 'Process Return' : 'Renew Book'}
+                </button>
+              )}
             </form>
           </div>
         </div>

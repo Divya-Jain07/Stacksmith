@@ -36,12 +36,14 @@ const startServer = async () => {
     // Initialize the chat socket handler
     initChatSocket(io);
 
+    const { getTenantGuardMode } = require('./plugins/tenantGuard');
     server.listen(PORT, () => {
       console.log(`=========================================`);
       console.log(`  Library System Backend Server Running  `);
       console.log(`  Local URL: http://localhost:${PORT}      `);
       console.log(`  WebSocket: ws://localhost:${PORT}        `);
       console.log(`  Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`  Tenant Guard: ${getTenantGuardMode().toUpperCase()}`);
       console.log(`=========================================`);
     });
   } catch (error) {

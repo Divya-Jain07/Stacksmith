@@ -10,14 +10,14 @@ Stacksmith now includes an automated backend test suite that catches regressions
 
 | Metric | Value |
 |---|---|
-| Test files | 5 |
-| Total tests | 95 |
-| Runtime | ~11 seconds |
+| Test files | 6 |
+| Total tests | 117 |
+| Runtime | ~12 seconds |
 | CI trigger | Every push and PR to `main`, `master`, or `dev` |
 | Database | In-memory MongoDB replica set |
 | Guard mode in tests | `enforce` |
 
-**Result:** `95 passed, 95 total`.
+**Result:** `117 passed, 117 total`.
 
 ---
 
@@ -71,7 +71,8 @@ backend/
 │   ├── concurrency.test.js
 │   ├── circulation.test.js
 │   ├── fines.test.js
-│   └── tenantGuard.test.js
+│   ├── tenantGuard.test.js
+│   └── securityHardening.test.js
 ├── .github/
 │   └── workflows/
 │       └── backend-tests.yml
@@ -203,6 +204,23 @@ The last case is critical: any started day counts as a full day, enforced by `Ma
 This suite validates the `tenantGuard` Mongoose plugin across the guarded models.
 
 It checks that the plugin is installed, that unscoped queries are rejected, that valid tenant-scoped queries pass, and that cross-tenant opt-out is only allowed with a reason.
+
+### `securityHardening.test.js` — security hardening & edge cases
+
+This suite covers 21 regression tests corresponding to the architectural hardening problems:
+
+| Category | What it proves |
+|---|---|
+| Member fines route isolation | Member calling `/api/fines/member/:id` receives 403 Forbidden; `/api/fines/me` returns only their own fines. |
+| Member profile updates | Member cannot modify `membershipType`, `borrowLimits`, `status`, or `membershipExpiryDate` (returns 403); immutable fields (`userId`, `memberCode`) are stripped. |
+| Book creation mass assignment | Client-supplied `availableCopies`, `totalCopies`, or vector data are ignored on book creation. |
+| Search regex escaping | Search queries containing regex special characters (`C++`, `(`, `[`, `{`, `?`, `*`) are escaped and return 200 without regex crashes or 500 errors. |
+| Embedding data protection | Book responses omit vector embeddings; search degrades gracefully to keyword search with `X-Degraded-Search` header when AI call fails. |
+| Concurrency & limits | Serialized borrow transactions prevent a member with limit 1 from acquiring 2 books simultaneously; transient conflicts return clean 4xx (409). |
+| Query parameter injection | Query parameters with object syntax (`?status[$ne]=...`) or array types return 400 Bad Request. |
+| Renewal validation | Renewal requests with invalid dates, past dates, or extensions exceeding 30 days return 400 Bad Request. |
+| Fine collection audit | Fines collected or waived by Admin/SuperAdmin record `collectedByUser` with the acting user's ID. |
+| SuperAdmin tenant filter | Malformed `adminId` query parameters to SuperAdmin endpoints return 400 Bad Request instead of throwing a 500 error. |
 
 ---
 

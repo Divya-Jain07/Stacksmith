@@ -48,7 +48,7 @@ const authorize = (...roles) => {
  *     The controller is expected to enforce ownership in this case.
  */
 const requireSelfOrStaff = (options = {}) => {
-  const { skipIdCheck = false } = options;
+  const { skipIdCheck = false, paramName = 'id' } = options;
 
   return async (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized.' });
@@ -64,10 +64,10 @@ const requireSelfOrStaff = (options = {}) => {
       const member = await Member.findOne({ userId: req.user.id, adminId: req.user.adminId });
       if (!member) return res.status(403).json({ error: 'Member profile not found.' });
 
-      // Unless skipIdCheck is set, verify :id matches the member's own profile
+      // Unless skipIdCheck is set, fail closed: check targetId against member's own profile ID
       if (!skipIdCheck) {
-        const targetId = req.params.id;
-        if (targetId && targetId !== member._id.toString()) {
+        const targetId = req.params[paramName];
+        if (!targetId || targetId !== member._id.toString()) {
           return res.status(403).json({ error: 'Access denied. Can only access your own profile.' });
         }
       }

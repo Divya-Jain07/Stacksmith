@@ -12,10 +12,11 @@ const buildTenantScopeFilter = (req) => {
 };
 
 // Shared helper function to generate copies and update counts
-const generateCopiesForBook = async (book, isbn, numberOfCopies, adminId) => {
+const generateCopiesForBook = async (book, isbn, numberOfCopies, adminId, session = null) => {
   if (!numberOfCopies || numberOfCopies <= 0) return [];
 
-  const existingCount = await BookCopy.countDocuments({ bookId: book._id });
+  const opts = session ? { session } : {};
+  const existingCount = await BookCopy.countDocuments({ bookId: book._id, adminId }, opts);
   const barcodeOwnerId = adminId ? adminId.toString().slice(-6) : 'GEN';
   const barcodePrefix = `${isbn}-${barcodeOwnerId}`;
   const copiesToInsert = [];
@@ -30,14 +31,14 @@ const generateCopiesForBook = async (book, isbn, numberOfCopies, adminId) => {
     });
   }
 
-  const createdCopies = await BookCopy.insertMany(copiesToInsert);
+  const createdCopies = await BookCopy.insertMany(copiesToInsert, opts);
 
-  const totalCopies = await BookCopy.countDocuments({ bookId: book._id });
-  const availableCopies = await BookCopy.countDocuments({ bookId: book._id, status: 'available' });
+  const totalCopies = await BookCopy.countDocuments({ bookId: book._id, adminId }, opts);
+  const availableCopies = await BookCopy.countDocuments({ bookId: book._id, status: 'available', adminId }, opts);
 
   book.totalCopies = totalCopies;
   book.availableCopies = availableCopies;
-  await book.save();
+  await book.save(opts);
 
   return createdCopies;
 };
@@ -56,35 +57,47 @@ const updateBookEmbedding = async (book) => {
 
 // Add Catalog Book Entry (Flow B)
 exports.createBook = catchAsync(async (req, res, next) => {
-    const { isbn, numberOfCopies } = req.body;
+    const { numberOfCopies } = req.body;
     const adminId = req.tenantFilter?.adminId;
 
     if (!adminId) {
       throw new ApiError(400, 'Please select a library scope before creating a book.');
     }
     
-    if (isbn) {
-      const existingBook = await Book.findOne({ isbn, ...buildTenantScopeFilter(req) });
+    // Allowed descriptive fields for book creation (ignore client-supplied counters/embeddings/tenantId)
+    const allowedFields = ['name', 'author', 'isbn', 'genre', 'language', 'description', 'publisher', 'yearPublished'];
+    const bookData = { adminId };
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        bookData[field] = req.body[field];
+      }
+    }
+
+    if (bookData.isbn) {
+      const existingBook = await Book.findOne({ isbn: bookData.isbn, adminId });
       if (existingBook) {
         throw new ApiError(400, 'Book with this ISBN already exists.');
       }
     }
 
-    const book = new Book({
-      ...req.body,
-      adminId
+    const { runInTransaction } = require('../utils/transaction');
+    const { book, createdCopies } = await runInTransaction(async (session) => {
+      const newBook = new Book(bookData);
+      await newBook.save({ session });
+
+      let copies = [];
+      const count = parseInt(numberOfCopies, 10);
+      if (count && count > 0) {
+        copies = await generateCopiesForBook(newBook, newBook.isbn, count, adminId, session);
+      }
+
+      return { book: newBook, createdCopies: copies };
     });
-    await book.save();
 
-    let createdCopies = [];
-    if (numberOfCopies && numberOfCopies > 0) {
-      createdCopies = await generateCopiesForBook(book, isbn, parseInt(numberOfCopies, 10), adminId);
-    }
-
-    const embeddingError = await updateBookEmbedding(book);
-    if (embeddingError) {
-      console.error(`Failed to generate embedding for book ${book._id}:`, embeddingError.message);
-    }
+    // Embedding generation runs in the background non-blocking
+    updateBookEmbedding(book).catch((embeddingError) => {
+      console.error(`Failed to generate embedding for book ${book._id}:`, embeddingError?.message);
+    });
 
     res.status(201).json({ book, copies: createdCopies });
   });
@@ -110,6 +123,7 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
   let skipped = 0;
   let invalid = 0;
   let embeddingFailed = 0;
+  const importedBooksToEmbed = [];
 
   fs.createReadStream(req.file.path)
     .pipe(csv({
@@ -168,14 +182,10 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
             description: description.trim(),
             adminId
           });
-          await book.save();
+          const savedBook = await book.save();
 
-          await generateCopiesForBook(book, isbn, numCopies, adminId);
-          const embeddingError = await updateBookEmbedding(book);
-          if (embeddingError) {
-            embeddingFailed++;
-            errors.push({ row: rowNum, isbn, reason: `Book imported, but embedding generation failed: ${embeddingError.message}` });
-          }
+          await generateCopiesForBook(savedBook, isbn, numCopies, adminId);
+          importedBooksToEmbed.push(savedBook);
           added++;
         } catch (error) {
           errors.push({ row: rowNum, isbn, reason: error.message });
@@ -184,7 +194,22 @@ exports.bulkImportBooks = catchAsync(async (req, res, next) => {
       }
 
       fs.unlink(req.file.path, () => {}); // Cleanup temp file
-      res.json({ added, updated, skipped, invalid, embeddingFailed, totalRows: results.length, errors });
+
+      // Background embedding queue with limited concurrency
+      if (importedBooksToEmbed.length > 0) {
+        setImmediate(async () => {
+          for (const b of importedBooksToEmbed) {
+            try {
+              await updateBookEmbedding(b);
+              await new Promise(r => setTimeout(r, 100)); // 100ms throttle between calls
+            } catch (e) {
+              console.error(`Background CSV embedding failed for ${b._id}:`, e.message);
+            }
+          }
+        });
+      }
+
+      res.json({ added, updated, skipped, invalid, embeddingQueued: importedBooksToEmbed.length, totalRows: results.length, errors });
     })
     .on('error', (error) => {
       fs.unlink(req.file.path, () => {});
@@ -259,18 +284,19 @@ exports.updateBook = catchAsync(async (req, res, next) => {
 
 // Delete Book (only if no copies are currently borrowed)
 exports.deleteBook = catchAsync(async (req, res, next) => {
+  const adminId = req.tenantFilter?.adminId;
   const filter = { _id: req.params.id, ...(req.tenantFilter || {}) };
   const book = await Book.findOne(filter);
   if (!book) throw new ApiError(404, 'Book not found.');
 
-  // Optionally check if copies are borrowed before deleting
-  const copies = await BookCopy.find({ bookId: book._id, status: 'borrowed' });
+  // Check if copies are borrowed before deleting (scoped by adminId)
+  const copies = await BookCopy.find({ bookId: book._id, status: 'borrowed', adminId });
   if (copies.length > 0) {
     throw new ApiError(400, 'Cannot delete book with currently borrowed copies.');
   }
 
-  // Delete copies first
-  await BookCopy.deleteMany({ bookId: book._id });
+  // Delete copies first (scoped by adminId)
+  await BookCopy.deleteMany({ bookId: book._id, adminId });
   await Book.findOneAndDelete(filter);
   res.json({ message: 'Book and its copies deleted successfully.' });
 });
@@ -312,6 +338,7 @@ exports.getCopiesByBookId = catchAsync(async (req, res, next) => {
 // Update Copy Condition or Status manually
 exports.updateCopy = catchAsync(async (req, res, next) => {
     const { condition, status } = req.body;
+    const adminId = req.tenantFilter?.adminId;
     const filter = { barcode: req.params.barcode, ...(req.tenantFilter || {}) };
     const copy = await BookCopy.findOne(filter);
     if (!copy) throw new ApiError(404, 'Copy not found');
@@ -324,7 +351,7 @@ exports.updateCopy = catchAsync(async (req, res, next) => {
 
     // Adjust Book Catalog available count if status changed
     if (status && oldStatus !== status) {
-      const book = await Book.findById(copy.bookId);
+      const book = await Book.findOne({ _id: copy.bookId, adminId });
       if (book) {
         // Decrement from available if it was available and now isn't
         if (oldStatus === 'available' && status !== 'available') {
@@ -352,14 +379,16 @@ exports.updateCopy = catchAsync(async (req, res, next) => {
 // Hybrid search (Keyword + Semantic with RRF)
 exports.searchBooks = catchAsync(async (req, res, next) => {
   const query = req.query.q;
-  if (!query) {
+  if (!query || typeof query !== 'string' || !query.trim()) {
     return res.json([]);
   }
 
+  const trimmedQuery = query.trim().slice(0, 100);
   const filter = req.tenantFilter || {};
   
-  // 1. Keyword Search (Regex based)
-  const regex = new RegExp(query, 'i');
+  // 1. Keyword Search (Safe Regex based with special chars escaped)
+  const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(escapedQuery, 'i');
   const keywordResults = await Book.find({
     ...filter,
     $or: [
@@ -367,16 +396,24 @@ exports.searchBooks = catchAsync(async (req, res, next) => {
       { author: regex },
       { genre: regex }
     ]
-  }).lean();
+  }).select('-embedding').lean();
+
+  // Apply per-user rate limit if user is authenticated
+  if (req.user?.id) {
+    embeddingService.checkUserRateLimit(req.user.id, 15);
+  }
 
   let finalResults = [];
+  let degraded = false;
 
   // 2. Semantic Search (if embedding service is configured)
   if (embeddingService.isConfigured()) {
     try {
-      const queryEmbedding = await embeddingService.generateEmbedding(query);
+      const queryEmbedding = await embeddingService.generateEmbedding(trimmedQuery, true);
       
-      const allBooks = await Book.find({ ...filter, embedding: { $exists: true, $ne: [] } }).lean();
+      const allBooks = await Book.find({ ...filter, embedding: { $exists: true, $ne: [] } })
+        .select('+embedding')
+        .lean();
       
       const semanticResults = allBooks.map(book => {
         const similarity = embeddingService.cosineSimilarity(queryEmbedding, book.embedding);
@@ -408,7 +445,9 @@ exports.searchBooks = catchAsync(async (req, res, next) => {
         .sort((a, b) => b.score - a.score)
         .map(item => item.book);
     } catch (err) {
-      console.error('Semantic search failed:', err.message);
+      if (err.statusCode === 429) throw err; // Re-throw budget/rate limit errors
+      console.error('Semantic search failed, degrading to keyword search:', err.message);
+      degraded = true;
       finalResults = keywordResults;
     }
   } else {
@@ -436,11 +475,19 @@ exports.searchBooks = catchAsync(async (req, res, next) => {
 
   const booksWithCounts = finalResults.map((book) => {
     delete book.embedding;
+    delete book.embeddingHash;
+    delete book.embeddingModel;
     const counts = countMap[String(book._id)] || { totalCopies: 0, availableCopies: 0 };
     return { ...book, ...counts };
   });
 
-  res.json(booksWithCounts.slice(0, 20));
+  const sliced = booksWithCounts.slice(0, 20);
+  if (degraded) {
+    res.set('X-Degraded-Search', 'true');
+    // If request asks for JSON, also attach degraded flag if array response can be wrapped or return list
+    // Return books list directly to preserve contract, with header
+  }
+  res.json(sliced);
 });
 
 // Get similar books (Semantic)
@@ -448,7 +495,11 @@ exports.getSimilarBooks = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const filter = req.tenantFilter || {};
 
-  const targetBook = await Book.findOne({ _id: id, ...filter }).lean();
+  if (req.user?.id) {
+    embeddingService.checkUserRateLimit(req.user.id, 15);
+  }
+
+  const targetBook = await Book.findOne({ _id: id, ...filter }).select('+embedding').lean();
   if (!targetBook) {
     throw new ApiError(404, 'Book not found');
   }
@@ -461,7 +512,7 @@ exports.getSimilarBooks = catchAsync(async (req, res, next) => {
     _id: { $ne: id }, 
     ...filter, 
     embedding: { $exists: true, $ne: [] } 
-  }).lean();
+  }).select('+embedding').lean();
 
   const similar = allBooks.map(book => {
     const similarity = embeddingService.cosineSimilarity(targetBook.embedding, book.embedding);
@@ -492,6 +543,8 @@ exports.getSimilarBooks = catchAsync(async (req, res, next) => {
 
   const result = similar.map((book) => {
     delete book.embedding;
+    delete book.embeddingHash;
+    delete book.embeddingModel;
     const counts = countMap[String(book._id)] || { totalCopies: 0, availableCopies: 0 };
     return { ...book, ...counts };
   });

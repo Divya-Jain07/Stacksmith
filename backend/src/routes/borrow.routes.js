@@ -4,7 +4,7 @@ const borrowController = require('../controllers/borrow.controller');
 const { authorize, requireSelfOrStaff } = require('../middlewares/auth.middleware');
 
 // --- Member Self-Service ---
-router.post('/request', requireSelfOrStaff(), borrowController.memberRequestBook);
+router.post('/request', requireSelfOrStaff({ skipIdCheck: true }), borrowController.memberRequestBook);
 router.delete('/:id/cancel', requireSelfOrStaff({ skipIdCheck: true }), borrowController.cancelMemberRequest);
 
 // --- Walk-in / Direct Issue (Staff Only) ---

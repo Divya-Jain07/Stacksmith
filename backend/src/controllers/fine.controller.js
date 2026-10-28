@@ -34,21 +34,31 @@ exports.listBranchFines = catchAsync(async (req, res) => {
   const adminId = req.tenantFilter?.adminId;
   if (!adminId) throw new ApiError(400, 'Branch selection required');
 
+  const { validateQueryParams } = require('../utils/queryValidator');
+  const valid = validateQueryParams(req.query, {
+    status: { type: 'string', enum: ['pending', 'collected', 'waived', 'all'], default: 'pending' },
+    reason: { type: 'string', enum: ['lost', 'overdue', 'damaged'] },
+    search: { type: 'string', maxLength: 200 },
+    memberId: { type: 'objectId' },
+    from: { type: 'date' },
+    to: { type: 'date' },
+    sort: { type: 'string', enum: ['newest', 'oldest', 'highest'], default: 'newest' },
+    page: { type: 'int', min: 1, default: 1 },
+    limit: { type: 'int', min: 1, max: 100, default: 20 },
+    adminId: { type: 'objectId' }
+  });
+
   const {
-    status = 'pending',
+    status,
     reason,
     search,
     memberId,
     from,
     to,
-    sort = 'newest',
-    page = 1,
-    limit = 20
-  } = req.query;
-
-  // Validate pagination
-  const parsedPage  = Math.max(1, parseInt(page, 10) || 1);
-  const parsedLimit = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    sort,
+    page: parsedPage,
+    limit: parsedLimit
+  } = valid;
 
   // Build fine filter
   const filter = { adminId };
@@ -117,7 +127,7 @@ exports.listBranchFines = catchAsync(async (req, res) => {
         }
       }
     }
-  ]).crossTenant('branch-summary');
+  ]);
 
   const summary = summaryAgg || { pendingCount: 0, pendingTotal: 0, collectedThisMonth: 0 };
 
@@ -134,6 +144,7 @@ exports.listBranchFines = catchAsync(async (req, res) => {
         match: { adminId }
       })
       .populate({ path: 'paymentCollectedBy', select: 'staffId name', match: { adminId } })
+      .populate({ path: 'collectedByUser', select: 'name email role' })
       .populate({ path: 'waivedBy', select: 'name email' })
       .lean()
   ]);
@@ -196,6 +207,7 @@ exports.collectFine = catchAsync(async (req, res) => {
         status: 'collected',
         paymentMode: 'Cash',
         collectedAt: new Date(),
+        collectedByUser: req.user.id,
         ...(staffId ? { paymentCollectedBy: staffId } : {})
       }
     },

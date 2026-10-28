@@ -237,21 +237,56 @@ The Alchemist,Paulo Coelho,9780061122415,Fiction,English,HarperOne,1988,3,A phil
 
 ## Notes
 
+- **Demo Credentials:** Demo accounts (`admin@selfwise.com`, `jane@selfwise.com`, `MEM-5770`, etc.) are for seeded fake demonstration data only. In production, real credentials are generated securely.
 - Do not commit real `.env` files.
-- Use a strong `JWT_SECRET` outside local development.
-- Restrict CORS origins before production deployment.
-- The provided demo accounts are intended only for demonstration and review.
+- Use a strong `JWT_SECRET` (at least 32 characters in production).
+- Restrict CORS origins via `ALLOWED_ORIGINS` before production deployment.
+
+## Testing & Quality Assurance
+
+To run the complete backend test suite:
+
+```bash
+cd backend
+npm ci
+npm test
+```
+
+- **In-Memory MongoDB Replica Set:** Tests spin up an in-memory replica set via `mongodb-memory-server` so MongoDB multi-document transactions and rollbacks run natively during tests without requiring external database dependencies.
+- **Tenant Guard Enforce Mode:** `TENANT_GUARD=enforce` is active by default in tests and in production, blocking any unscoped database queries that omit `adminId`.
+- **Coverage:** 117 automated tests covering tenant isolation, circulation transactions, concurrent borrow limit serialization, query parser hardening, regex escaping, and fine operations.
 
 ## Smart Search & AI Features
-Stacksmith features a **Smart Search** and **More Like This** recommendation system for members exploring the catalog. 
-- **Hybrid retrieval:** Combines keyword matching (title, author, genre) with semantic search over Gemini embeddings, merged with Reciprocal Rank Fusion. Members can search by mood, theme or topic (e.g. "a book about space travel") and still find exact titles. If the embedding service is unavailable, it falls back to keyword results. No LLM generates text.
-- **Privacy First:** No member data is sent to the embedding provider. Only book catalog data (title, author, genre, description) is embedded.
 
-*Note: For the best Smart Search experience, ensure books have comprehensive descriptions. Current catalog description coverage is ~83%.*
+Stacksmith includes an intelligent **Smart Search** and **More Like This** recommendation system for catalog exploration:
+- **Hybrid Retrieval:** Combines exact keyword & regex matching with semantic similarity over Google Gemini embeddings (`gemini-embedding-2`), merged via Reciprocal Rank Fusion (RRF).
+- **Graceful Fallback:** If the embedding API key is absent or the external provider fails/times out, search automatically degrades to keyword search with an `X-Degraded-Search` flag instead of returning 500.
+- **Privacy & Performance:** Only book metadata (title, author, genre, description) is embedded. No member data is ever sent to the provider. Responses exclude embedding vectors by default. Book creation responds immediately and triggers embedding generation in the background.
+- **Cost Controls:** Per-user rate limiting (15 requests/minute per authenticated user), daily query budget (default 500, configurable via `DAILY_AI_BUDGET`), and in-memory LRU query cache.
 
-## Testing & Stability
-- **Test Suite:** 95 Jest/Supertest tests covering circulation flows, concurrent issue/return, tenant isolation, the tenant guard and fine calculation. They run against an in-memory MongoDB replica set so transactions work in tests.
-- **Tenant Isolation:** The tenant guard runs in **enforce** mode in tests and production to prevent cross-branch data access.
-- **CI Status:** The test suite runs automatically on push and pull requests via GitHub Actions.
-- **Not yet covered:** Socket.IO chat, an explicit role-permission matrix, and the frontend.
-- **Smart Search evaluation:** Relevance has not been measured yet; results by query type will be documented once evaluated.
+### Required Environment Variables
+
+| Variable | Description | Default / Example |
+|---|---|---|
+| `PORT` | Backend server port | `5000` |
+| `MONGO_URI` | MongoDB connection URI | `mongodb+srv://...` |
+| `NODE_ENV` | Application environment (`development`, `production`, `test`) | `development` |
+| `JWT_SECRET` | Secret for signing JWTs (min 32 chars in production) | `your_secret_here` |
+| `JWT_EXPIRES_IN` | Token expiration duration | `7d` |
+| `ALLOWED_ORIGINS` | Comma-separated CORS allowed origins | `http://localhost:5173,https://your-domain.vercel.app` |
+| `TENANT_GUARD` | Tenant guard mode (`enforce`, `warn`, `off`) | `enforce` (prod/test), `warn` (dev) |
+| `USE_PUBLIC_DNS` | Force public DNS servers `1.1.1.1` and `8.8.8.8` | `false` |
+| `GEMINI_API_KEY` | Google Gemini API key for embeddings | `your_gemini_api_key` |
+| `EMBEDDING_MODEL` | Embedding model name | `gemini-embedding-2` |
+| `EMBEDDING_DIMENSION` | Output vector dimension | `768` |
+| `DAILY_AI_BUDGET` | Daily limit on smart search embedding calls | `500` |
+| `VITE_API_URL` | Frontend API base URL | `http://localhost:5000` |
+
+## Counter Console & Return Preview
+
+The Counter Console features a live loan preview when returning books:
+- Entering a barcode immediately loads the borrower details, due date, and overdue status.
+- If overdue, a clear overdue banner displays the days overdue and exact fine amount.
+- Staff can choose **Return & Mark Fine Paid** (collecting cash immediately) or **Return, Fine Stays Pending**.
+- If mark-as-paid fails, the return is preserved and staff are prompted to retry without losing loan state.
+- A persistent result card retains loan and payment details after processing.

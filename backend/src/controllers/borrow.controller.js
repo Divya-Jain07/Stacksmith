@@ -93,6 +93,27 @@ exports.issueBook = catchAsync(async (req, res, next) => {
   }
 
   const borrowing = await runInTransaction(async (session) => {
+    // Serialise work per member by updating a version counter inside the transaction
+    const lockedMember = await Member.findOneAndUpdate(
+      { _id: member._id, adminId },
+      { $inc: { __v: 1 } },
+      { new: true, session }
+    );
+    if (!lockedMember) throw new ApiError(404, 'Member not found');
+
+    // Count active borrowings inside the transaction under the serialized member lock
+    const activeBorrowsInTx = await BorrowingHistory.countDocuments(
+      {
+        memberId: member._id,
+        requestStatus: { $in: ['Requested', 'Active'] },
+        adminId
+      },
+      { session }
+    );
+    if (activeBorrowsInTx >= lockedMember.borrowLimits) {
+      throw new ApiError(400, 'Borrow limit exceeded');
+    }
+
     // 1. Claim copy (conditional update)
     const copy = await BookCopy.findOneAndUpdate(
       { barcode, status: { $in: ['available', 'reserved'] }, adminId },
@@ -195,13 +216,29 @@ exports.renewBorrowing = catchAsync(async (req, res, next) => {
     throw new ApiError(400, 'Due date required');
   }
 
+  const parsedDate = new Date(targetDate);
+  if (isNaN(parsedDate.getTime())) {
+    throw new ApiError(400, 'Invalid renewal due date');
+  }
+
   const copy = await BookCopy.findOne({ barcode, status: 'borrowed', adminId });
   if (!copy) throw new ApiError(404, 'Borrowed copy not found');
 
   const borrowing = await BorrowingHistory.findOne({ bookCopyId: copy._id, returnedDate: null, adminId });
   if (!borrowing) throw new ApiError(404, 'Borrowing record not found');
 
-  borrowing.dueDate = new Date(targetDate);
+  const currentDueDate = borrowing.dueDate ? new Date(borrowing.dueDate) : new Date();
+  if (parsedDate <= currentDueDate) {
+    throw new ApiError(400, 'New due date must be later than the current due date');
+  }
+
+  const MAX_EXTENSION_DAYS = parseInt(process.env.MAX_RENEWAL_DAYS, 10) || 30;
+  const maxAllowedDate = new Date(Date.now() + MAX_EXTENSION_DAYS * 24 * 60 * 60 * 1000);
+  if (parsedDate > maxAllowedDate) {
+    throw new ApiError(400, `Renewal date cannot be more than ${MAX_EXTENSION_DAYS} days from today`);
+  }
+
+  borrowing.dueDate = parsedDate;
   await borrowing.save();
 
   res.json({ message: 'Book renewed successfully.', borrowing });
@@ -230,6 +267,26 @@ exports.memberRequestBook = catchAsync(async (req, res, next) => {
   }
 
   const borrowing = await runInTransaction(async (session) => {
+    // Serialise per member
+    const lockedMember = await Member.findOneAndUpdate(
+      { _id: memberId, adminId },
+      { $inc: { __v: 1 } },
+      { new: true, session }
+    );
+    if (!lockedMember) throw new ApiError(404, 'Active member not found');
+
+    const activeBorrowsInTx = await BorrowingHistory.countDocuments(
+      {
+        memberId,
+        requestStatus: { $in: ['Requested', 'Active'] },
+        adminId
+      },
+      { session }
+    );
+    if (activeBorrowsInTx >= lockedMember.borrowLimits) {
+      throw new ApiError(400, 'Borrow limit exceeded');
+    }
+
     let copyQuery = { status: 'available', adminId };
     if (barcode) {
       copyQuery.barcode = barcode;
@@ -435,7 +492,7 @@ exports.previewReturn = catchAsync(async (req, res, next) => {
   const pendingFines = await Fine.aggregate([
     { $match: { adminId: borrowing.adminId, borrowedUser: borrowing.memberId, status: 'pending', _id: { $exists: true } } },
     { $group: { _id: null, count: { $sum: 1 }, total: { $sum: '$amountToPay' } } }
-  ]).crossTenant('preview-fines-check');
+  ]);
 
   const otherFines = pendingFines[0] || { count: 0, total: 0 };
 

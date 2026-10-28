@@ -11,10 +11,16 @@ const tenantScope = (req, res, next) => {
 
   if (req.user.role === 'SuperAdmin') {
     const mongoose = require('mongoose');
-    // SuperAdmin can see across tenants. If they pass adminId in query, use it.
-    req.tenantFilter = req.query.adminId ? { adminId: new mongoose.Types.ObjectId(req.query.adminId) } : {};
-    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.query.adminId) {
-      req.body.adminId = req.query.adminId;
+    if (req.query.adminId) {
+      if (!mongoose.Types.ObjectId.isValid(req.query.adminId)) {
+        return res.status(400).json({ error: 'Invalid branch ID format provided in adminId.' });
+      }
+      req.tenantFilter = { adminId: new mongoose.Types.ObjectId(req.query.adminId) };
+      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        req.body.adminId = req.query.adminId;
+      }
+    } else {
+      req.tenantFilter = {};
     }
   } else {
     const mongoose = require('mongoose');

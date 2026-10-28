@@ -80,9 +80,16 @@ function handleViolation(mode, modelName, op) {
   }
 }
 
+function getTenantGuardMode() {
+  if (process.env.TENANT_GUARD) {
+    return process.env.TENANT_GUARD.toLowerCase();
+  }
+  return (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'test') ? 'enforce' : 'warn';
+}
+
 function tenantGuardPlugin(schema) {
   // Read mode once at plugin-application time so tests can set the env before models load.
-  const mode = (process.env.TENANT_GUARD || 'warn').toLowerCase();
+  const mode = getTenantGuardMode();
 
   if (mode === 'off') return;
 
@@ -185,4 +192,4 @@ function patchAggregateForModel(Model) {
   Model._isTenantGuarded = true;
 }
 
-module.exports = { tenantGuardPlugin, patchAggregateForModel };
+module.exports = { tenantGuardPlugin, patchAggregateForModel, getTenantGuardMode };

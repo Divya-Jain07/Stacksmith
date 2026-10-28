@@ -4,7 +4,7 @@ const borrowController = require('../controllers/borrow.controller');
 const { authorize, requireSelfOrStaff } = require('../middlewares/auth.middleware');
 
 // --- Member Self-Service ---
-router.post('/self', requireSelfOrStaff(), borrowController.memberReserveBook);
+router.post('/self', requireSelfOrStaff({ skipIdCheck: true }), borrowController.memberReserveBook);
 router.delete('/:id/cancel', requireSelfOrStaff({ skipIdCheck: true }), borrowController.cancelCatalogHold);
 
 // POST /api/reservations - Add member to FIFO hold queue for a book (Walk-in / Staff)

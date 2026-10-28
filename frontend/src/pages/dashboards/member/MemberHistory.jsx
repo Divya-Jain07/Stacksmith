@@ -163,7 +163,7 @@ export default function MemberHistory() {
                 {fines.map((f, idx) => (
                   <tr key={f._id} style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-main)', fontSize: '0.9rem', background: idx % 2 === 0 ? 'transparent' : 'var(--bg-hover)' }}>
                     <td style={{ padding: '1rem', fontWeight: 500 }}>{f.borrowingId?.bookCopyId?.bookId?.name || 'Unknown Book'}</td>
-                    <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--text-main)' }}>${f.amountToPay.toFixed(2)}</td>
+                    <td style={{ padding: '1rem', fontWeight: 600, color: 'var(--text-main)' }}>₹{f.amountToPay.toFixed(2)}</td>
                     <td style={{ padding: '1rem', textTransform: 'capitalize' }}>{f.reason}</td>
                     <td style={{ padding: '1rem' }}>{new Date(f.createdAt).toLocaleDateString('en-GB').replace(/\//g, '-')}</td>
                     <td style={{ padding: '1rem' }}>

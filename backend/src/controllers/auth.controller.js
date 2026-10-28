@@ -35,9 +35,12 @@ const createStaffUser = async ({ name, email, phone, password, role, adminId, st
     let isUnique = false;
     while (!isUnique) {
       uniqueStaffId = `LIB-${Math.floor(1000 + Math.random() * 9000)}`;
-      const exists = await LibrarianStaff.findOne({ staffId: uniqueStaffId });
+      const exists = await LibrarianStaff.findOne({ staffId: uniqueStaffId }).crossTenant('global uniqueness check: auto-generated staffId must be globally unique');
       if (!exists) isUnique = true;
     }
+  } else {
+    const exists = await LibrarianStaff.findOne({ staffId: uniqueStaffId }).crossTenant('global uniqueness check: custom staffId must be globally unique');
+    if (exists) throw Object.assign(new Error('Librarian with this staff ID already exists.'), { statusCode: 400 });
   }
 
   const staffProfile = new LibrarianStaff({

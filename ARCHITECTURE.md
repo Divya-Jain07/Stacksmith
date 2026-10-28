@@ -12,6 +12,8 @@
 - [8. Real-Time Chat Architecture](#8-real-time-chat-architecture)
 - [9. Frontend Structure](#9-frontend-structure)
 - [10. Design Decisions & Trade-offs](#10-design-decisions--trade-offs)
+- [11. Smart Search & More Like This](#11-smart-search--more-like-this)
+- [12. Known Limitations & Future Work](#12-known-limitations--future-work)
 
 ## 1. Overview
 
@@ -265,10 +267,11 @@ erDiagram
 **Note on Identity Uniqueness:** Member email addresses (in the `User` collection) and `memberCode` values are globally unique by design across all tenants. This ensures there are no conflicts during authentication.
 
 ## 6.1 Tenant Isolation & Query Guard
-While tenant isolation relies on filtering by `adminId`, it is strictly enforced by a Mongoose plugin (`tenantGuardPlugin`). 
-- **What it enforces:** Every query (`find`, `findOne`, `aggregate`, etc.) on a tenant-owned model must include an `adminId` filter or explicitly opt out. If the filter is missing, the query throws an error in `enforce` mode (or logs a warning in `warn` mode).
-- **Opt-out:** Truly cross-tenant queries (like member login or global uniqueness checks) use `.crossTenant('reason')` to bypass the guard intentionally.
-- **Rollout:** The guard was deployed first in `warn` mode to identify and fix missing filters, then switched to `enforce` mode in production to guarantee isolation (fail-closed).
+While tenant isolation relies on filtering by `adminId`, it is strictly enforced at the database layer by a Mongoose plugin (`tenantGuardPlugin`). 
+- **What it enforces:** Every query (`find`, `findOne`, `findOneAndUpdate`, `updateOne`, `updateMany`, `deleteMany`, `aggregate`, etc.) on a tenant-owned model must include an `adminId` filter or explicitly opt out with `.crossTenant('reason')`. If the filter is missing, the query throws a `TenantGuardViolationError` in `enforce` mode (or logs a warning in `warn` mode).
+- **Default Mode:** By default, the guard runs in `enforce` mode in both `production` and `test` environments (and `warn` in `development`), configured via `TENANT_GUARD=enforce`.
+- **Opt-out:** Truly cross-tenant queries (such as cross-branch unique email/code checks or member login code lookup) use `.crossTenant('reason')` to bypass the guard intentionally with an audited justification.
+- **Fail-Closed:** Missing filters or unauthenticated calls fail closed, preventing cross-tenant data leaks even in the event of missing controller-level filters.
 
 ## 7. Borrowing Lifecycle
 
@@ -354,6 +357,15 @@ Server-side safeguards worth noting:
 Stacksmith includes a retrieval-only hybrid search capability for the catalog:
 - **Hybrid Search:** Combines semantic vector similarity with traditional keyword/ISBN matching. Semantic search embeds the query and compares it in-memory with the branch's book vectors.
 - **More Like This:** Recommends similar books by finding nearest neighbor vectors in the same branch.
-- **Privacy:** It is retrieval-only (no LLM generation). No member data is sent to the embedding provider—only the book's title, author, genre, and description.
-- **Limitations:** Vector comparison runs in memory over the branch's embedded books, which is fine at this catalog size. A vector index (for example Atlas Vector Search) would be the next step for larger catalogs. Caching, rate limits and budget caps are per-process and would need a shared store such as Redis for multi-instance deployments.
-- **Message Model Status:** The `Message` model relies on its parent `Conversation` for tenant scoping, which is an intentional design choice given the high volume of messages.
+- **Privacy & Protection:** Retrieval-only (no generative LLM hallucinations). No member PII is sent to the embedding provider—only the book's title, author, genre, and description. Embeddings are marked `select: false` on the Book model to prevent exposing large vector arrays over standard REST catalog endpoints.
+- **Background Embeddings:** Generating vectors during book creation or update occurs asynchronously in the background so book creation HTTP responses remain instantaneous.
+- **Graceful Fallback:** If the embedding service is unconfigured, over quota, or encounters errors, search gracefully degrades to keyword search with an `X-Degraded-Search: true` header.
+
+## 12. Known Limitations & Future Work
+
+- **Chat Message Model Isolation:** The `Message` collection carries `conversationId` and does not carry an explicit `adminId`. Scoping is strictly enforced through its parent `Conversation` lookups.
+- **In-Memory Caches & Rate Limits:** Embedding query caches (LRU 200 items), daily budget tracking, and per-user search rate limit counters reside in-memory within the Node.js process. In a horizontally scaled multi-instance deployment, this requires a shared store such as Redis.
+- **In-Memory Vector Search:** Semantic similarity computations run in-memory over the branch catalog's vectors using cosine similarity. For catalogs exceeding tens of thousands of titles, migrating to a dedicated vector index (e.g. MongoDB Atlas Vector Search) is recommended.
+- **JWT Lifetime & Revocation:** Access tokens are signed with a 7-day expiration and do not maintain a server-side revocation list. Logout is handled client-side by discarding the token.
+- **Request Validation:** Input validation is performed directly inside Express controller functions rather than via a declarative schema framework (e.g. Zod or Joi).
+- **Identity Uniqueness Across Tenants:** User emails and member codes are globally unique across all branches to enable single-identifier logins.

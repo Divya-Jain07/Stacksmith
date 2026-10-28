@@ -7,8 +7,8 @@ const { authorize, requireSelfOrStaff } = require('../middlewares/auth.middlewar
 // Must be BEFORE /:memberId route to avoid being shadowed
 router.get('/', authorize('SuperAdmin', 'Admin', 'Librarian'), fineController.listBranchFines);
 
-// GET /api/fines/member/:memberId - Get all fines for a specific member
-router.get('/member/:memberId', requireSelfOrStaff(), fineController.getFines);
+// GET /api/fines/member/:memberId - Get all fines for a specific member (Staff only)
+router.get('/member/:memberId', authorize('SuperAdmin', 'Admin', 'Librarian'), fineController.getFines);
 
 // POST /api/fines/:id/pay - Collect payment for a fine (cash only)
 router.post('/:id/pay', authorize('SuperAdmin', 'Admin', 'Librarian'), fineController.collectFine);

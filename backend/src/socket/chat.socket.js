@@ -106,7 +106,7 @@ module.exports = (io) => {
             text: sanitized
           });
           await firstMessage.save();
-          await Conversation.findByIdAndUpdate(conversation._id, { lastMessageAt: new Date() });
+          await Conversation.findOneAndUpdate({ _id: conversation._id, adminId }, { lastMessageAt: new Date() });
         }
 
         // Member joins the conversation room
@@ -204,7 +204,7 @@ module.exports = (io) => {
         });
         await message.save();
 
-        await Conversation.findByIdAndUpdate(conversationId, { lastMessageAt: new Date() });
+        await Conversation.findOneAndUpdate({ _id: conversationId, adminId }, { lastMessageAt: new Date() });
 
         // Broadcast to everyone in the room (both member and librarian)
         io.to(`conv:${conversationId}`).emit('message:new', { message });
@@ -234,8 +234,8 @@ module.exports = (io) => {
 
           // Auto-assign to this librarian if still unassigned (so they can send messages immediately)
           if (!conversation.librarianId && conversation.status === 'Open') {
-            const updated = await Conversation.findByIdAndUpdate(
-              conversationId,
+            const updated = await Conversation.findOneAndUpdate(
+              { _id: conversationId, adminId },
               { librarianId: socket.staffProfile._id, status: 'Assigned' },
               { new: true }
             ).populate('memberId', 'name memberCode');
