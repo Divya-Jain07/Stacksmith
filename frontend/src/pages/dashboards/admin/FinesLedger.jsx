@@ -10,17 +10,18 @@ import { fineApi } from '../../../services/api'
 const CURRENCY = '₹'
 
 // Map stored DB values to display labels
-const STATUS_LABEL = { pending: 'Pending', collected: 'Collected', left: 'Waived' }
+const STATUS_LABEL = { pending: 'Pending', collected: 'Collected', left: 'Waived', waived: 'Waived' }
 const STATUS_COLOR = {
   pending:   { bg: 'rgba(239,83,80,0.12)',   color: '#EF9A9A' },
   collected: { bg: 'rgba(129,199,132,0.12)', color: '#81C784' },
-  left:      { bg: 'rgba(189,189,189,0.12)', color: '#BDBDBD' }
+  left:      { bg: 'rgba(189,189,189,0.12)', color: '#BDBDBD' },
+  waived:    { bg: 'rgba(189,189,189,0.12)', color: '#BDBDBD' }
 }
 
 const TABS = [
   { key: 'pending',   label: 'Pending'   },
   { key: 'collected', label: 'Collected' },
-  { key: 'left',      label: 'Waived'    },
+  { key: 'waived',    label: 'Waived'    },
   { key: 'all',       label: 'All'       }
 ]
 
